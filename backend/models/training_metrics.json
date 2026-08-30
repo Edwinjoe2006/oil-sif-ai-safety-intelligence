@@ -1,0 +1,405 @@
+{
+  "timestamp": "2026-08-29T09:27:12.104898",
+  "total_samples": 5000,
+  "train_samples": 4000,
+  "test_samples": 1000,
+  "models": {
+    "sif_classifier": {
+      "target": "sif_precursor",
+      "accuracy": 0.85,
+      "precision": 0.9254,
+      "recall_sif_positive": 0.8499,
+      "f1_score": 0.886,
+      "weighted_f1": 0.8529,
+      "confusion_matrix": [
+        [
+          267,
+          47
+        ],
+        [
+          103,
+          583
+        ]
+      ],
+      "classification_report": {
+        "0": {
+          "precision": 0.7216216216216216,
+          "recall": 0.8503184713375797,
+          "f1-score": 0.7807017543859649,
+          "support": 314.0
+        },
+        "1": {
+          "precision": 0.9253968253968254,
+          "recall": 0.8498542274052479,
+          "f1-score": 0.8860182370820668,
+          "support": 686.0
+        },
+        "accuracy": 0.85,
+        "macro avg": {
+          "precision": 0.8235092235092235,
+          "recall": 0.8500863493714137,
+          "f1-score": 0.8333599957340159,
+          "support": 1000.0
+        },
+        "weighted avg": {
+          "precision": 0.8614114114114114,
+          "recall": 0.85,
+          "f1-score": 0.8529488615154909,
+          "support": 1000.0
+        }
+      }
+    },
+    "hazard_classifier": {
+      "target": "hazard_category",
+      "classes": [
+        "Chemical Exposure",
+        "Confined Space",
+        "Electrical",
+        "Energy Isolation",
+        "Fire/Explosion",
+        "Heavy Equipment",
+        "Housekeeping",
+        "Lifting",
+        "PPE",
+        "Pressure",
+        "Process Safety",
+        "Working at Height"
+      ],
+      "accuracy": 1.0,
+      "weighted_f1": 1.0,
+      "confusion_matrix": [
+        [
+          90,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          79,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          81,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          80,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          84,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          86,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          80,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          90,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          80,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          86,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          88,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          76
+        ]
+      ],
+      "classification_report": {
+        "Chemical Exposure": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 90.0
+        },
+        "Confined Space": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 79.0
+        },
+        "Electrical": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 81.0
+        },
+        "Energy Isolation": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 80.0
+        },
+        "Fire/Explosion": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 84.0
+        },
+        "Heavy Equipment": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 86.0
+        },
+        "Housekeeping": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 80.0
+        },
+        "Lifting": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 90.0
+        },
+        "PPE": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 80.0
+        },
+        "Pressure": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 86.0
+        },
+        "Process Safety": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 88.0
+        },
+        "Working at Height": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 76.0
+        },
+        "accuracy": 1.0,
+        "macro avg": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 1000.0
+        },
+        "weighted avg": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 1000.0
+        }
+      }
+    },
+    "severity_classifier": {
+      "target": "severity",
+      "classes": [
+        "Critical",
+        "High",
+        "Low",
+        "Medium"
+      ],
+      "accuracy": 0.428,
+      "weighted_f1": 0.4265,
+      "confusion_matrix": [
+        [
+          89,
+          95,
+          32,
+          29
+        ],
+        [
+          137,
+          159,
+          40,
+          41
+        ],
+        [
+          13,
+          14,
+          158,
+          51
+        ],
+        [
+          33,
+          29,
+          58,
+          22
+        ]
+      ],
+      "classification_report": {
+        "Critical": {
+          "precision": 0.3272058823529412,
+          "recall": 0.363265306122449,
+          "f1-score": 0.344294003868472,
+          "support": 245.0
+        },
+        "High": {
+          "precision": 0.5353535353535354,
+          "recall": 0.4217506631299735,
+          "f1-score": 0.47181008902077154,
+          "support": 377.0
+        },
+        "Low": {
+          "precision": 0.5486111111111112,
+          "recall": 0.6694915254237288,
+          "f1-score": 0.6030534351145038,
+          "support": 236.0
+        },
+        "Medium": {
+          "precision": 0.15384615384615385,
+          "recall": 0.15492957746478872,
+          "f1-score": 0.1543859649122807,
+          "support": 142.0
+        },
+        "accuracy": 0.428,
+        "macro avg": {
+          "precision": 0.3912541706659354,
+          "recall": 0.40235926803523503,
+          "f1-score": 0.39338587322900703,
+          "support": 1000.0
+        },
+        "weighted avg": {
+          "precision": 0.4333121000731295,
+          "recall": 0.428,
+          "f1-score": 0.42646785221317324,
+          "support": 1000.0
+        }
+      }
+    }
+  }
+}

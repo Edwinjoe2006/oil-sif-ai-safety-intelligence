@@ -1,0 +1,5 @@
+# This directory holds trained machine learning models:
+# - sif_model.joblib & sif_vectorizer.joblib
+# - hazard_model.joblib & hazard_vectorizer.joblib
+# - severity_model.joblib & severity_vectorizer.joblib
+# - training_metrics.json
