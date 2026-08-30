@@ -7,7 +7,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'https://ai-powered-sif-precursor-detection-system.onrender.com',
         changeOrigin: true,
         secure: false,
       },
