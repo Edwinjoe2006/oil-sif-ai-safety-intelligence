@@ -1,4 +1,11 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+let base = import.meta.env.VITE_API_BASE_URL || '/api';
+if (base.startsWith('http')) {
+  base = base.replace(/\/+$/, '');
+  if (!base.endsWith('/api')) {
+    base = `${base}/api`;
+  }
+}
+const API_BASE = base;
 
 async function handleResponse(response) {
   if (!response.ok) {
