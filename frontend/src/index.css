@@ -460,3 +460,50 @@ code, pre, .mono {
     text-overflow: ellipsis;
   }
 }
+
+/* Enterprise Print Styling for Safety Incident Dossier */
+@media print {
+  body {
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+  }
+
+  .sidebar-container,
+  .top-navbar-container,
+  .mobile-menu-btn,
+  .mobile-close-btn,
+  .btn,
+  button {
+    display: none !important;
+  }
+
+  .app-container {
+    background: none !important;
+    display: block !important;
+  }
+
+  .main-content {
+    overflow: visible !important;
+  }
+
+  .page-wrapper {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .glass-card {
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    border: 1px solid #CBD5E1 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  h1, h2, h3, h4, strong {
+    color: #0F172A !important;
+  }
+
+  p, span, td, th {
+    color: #334155 !important;
+  }
+}

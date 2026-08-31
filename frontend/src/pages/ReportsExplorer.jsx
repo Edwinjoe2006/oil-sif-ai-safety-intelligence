@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, RefreshCw, Eye, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, RefreshCw, Eye, ArrowUpDown, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { api } from '../services/api';
 import RiskBadge from '../components/RiskBadge';
 import SeverityBadge from '../components/SeverityBadge';
@@ -63,6 +63,33 @@ export default function ReportsExplorer({ onNavigateToReport, onNavigateToAnalyz
 
   const totalPages = Math.ceil(total / limit) || 1;
 
+  const handleExportCSV = () => {
+    if (!reports || reports.length === 0) return;
+    const headers = ['ID', 'Risk Level', 'Risk Score', 'SIF Precursor', 'Hazard Category', 'Severity', 'Report Type', 'Location', 'Status', 'Date', 'Report Text'];
+    const rows = reports.map(r => [
+      r.id,
+      r.risk_level,
+      r.risk_score,
+      r.sif_prediction ? 'Yes' : 'No',
+      `"${(r.hazard_category || '').replace(/"/g, '""')}"`,
+      r.severity || '',
+      r.report_type || '',
+      `"${(r.location || '').replace(/"/g, '""')}"`,
+      r.status || '',
+      `"${new Date(r.created_at).toISOString()}"`,
+      `"${(r.report_text || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `oil_sif_safety_reports_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="page-wrapper">
       {/* Header */}
@@ -75,14 +102,26 @@ export default function ReportsExplorer({ onNavigateToReport, onNavigateToAnalyz
             Search, filter, and audit {total} safety events recorded across operational assets.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={fetchReports}
-        >
-          <RefreshCw size={16} />
-          Refresh
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleExportCSV}
+            disabled={reports.length === 0}
+            title="Download records as enterprise CSV spreadsheet"
+          >
+            <Download size={16} />
+            Export CSV
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={fetchReports}
+          >
+            <RefreshCw size={16} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Filter Toolbar */}

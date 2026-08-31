@@ -8,7 +8,8 @@ import {
   Flame,
   CheckCircle2,
   Check,
-  ShieldAlert
+  ShieldAlert,
+  Printer
 } from 'lucide-react';
 import { api } from '../services/api';
 import RiskScoreGauge from '../components/RiskScoreGauge';
@@ -83,20 +84,31 @@ export default function ReportDetails({ reportId, onBack }) {
           <ArrowLeft size={16} /> Back to Reports
         </button>
 
-        {/* Status Dropdown */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Lifecycle Status:</span>
-          <select
-            className="form-select"
-            style={{ width: '160px', padding: '0.45rem 0.75rem' }}
-            value={report.status}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            disabled={statusUpdating}
+        {/* Status Dropdown & Print */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => window.print()}
+            title="Print Official Safety Incident Briefing Dossier"
           >
-            <option value="Open">Open</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Resolved">Resolved</option>
-          </select>
+            <Printer size={16} />
+            Print Brief
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Status:</span>
+            <select
+              className="form-select"
+              style={{ width: '150px', padding: '0.45rem 0.75rem' }}
+              value={report.status}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              disabled={statusUpdating}
+            >
+              <option value="Open">Open</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Resolved">Resolved</option>
+            </select>
+          </div>
         </div>
       </div>
 

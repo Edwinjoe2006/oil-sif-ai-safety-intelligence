@@ -10,7 +10,12 @@ import {
   Clock,
   MapPin,
   Bot,
-  Zap
+  Zap,
+  Mic,
+  MicOff,
+  Sliders,
+  ShieldCheck,
+  CheckSquare
 } from 'lucide-react';
 import { api } from '../services/api';
 import RiskScoreGauge from '../components/RiskScoreGauge';
@@ -78,6 +83,64 @@ export default function AnalyzeReport({ onNavigateToReport }) {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [completedActions, setCompletedActions] = useState({});
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(true);
+
+  // What-If Barrier Simulation State
+  const [mitigations, setMitigations] = useState({
+    ptw: false,
+    ppe: false,
+    loto: false,
+    gasTesting: false,
+    fallProtection: false,
+  });
+
+  const toggleVoiceDictation = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setSpeechSupported(false);
+      alert('Voice dictation is not supported in this browser. Please use Chrome, Safari, or Edge.');
+      return;
+    }
+
+    if (isListening) {
+      window._activeRecognition?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setReportText((prev) => (prev ? `${prev} ${transcript.trim()}` : transcript.trim()));
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      window._activeRecognition = recognition;
+      recognition.start();
+    } catch {
+      setIsListening(false);
+    }
+  };
 
   const handleUseScenario = (sc) => {
     setReportText(sc.text);
@@ -85,6 +148,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
     setLocation(sc.location);
     setResult(null);
     setError(null);
+    setMitigations({ ptw: false, ppe: false, loto: false, gasTesting: false, fallProtection: false });
   };
 
   const handleAnalyze = async (e) => {
@@ -221,10 +285,44 @@ export default function AnalyzeReport({ onNavigateToReport }) {
           </div>
 
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94A3B8' }}>
-                Safety Observation / Incident Narrative
-              </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94A3B8' }}>
+                  Safety Observation / Incident Narrative
+                </label>
+                {/* Voice Dictation Button */}
+                <button
+                  type="button"
+                  onClick={toggleVoiceDictation}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.2rem 0.55rem',
+                    borderRadius: '6px',
+                    fontSize: '0.7rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    background: isListening ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.1)',
+                    border: `1px solid ${isListening ? '#EF4444' : 'rgba(56, 189, 248, 0.3)'}`,
+                    color: isListening ? '#EF4444' : '#38BDF8',
+                    transition: 'all 0.2s ease',
+                  }}
+                  title="Speak safety observation using field speech-to-text dictation"
+                >
+                  {isListening ? (
+                    <>
+                      <MicOff size={12} className="animate-pulse" />
+                      <span>Listening...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic size={12} />
+                      <span>Voice Input</span>
+                    </>
+                  )}
+                </button>
+              </div>
               <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
                 {reportText.length} characters
               </span>
@@ -381,6 +479,124 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                   <SeverityBadge severity={result.severity} />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Interactive What-If Barrier Mitigation Simulator */}
+          <div
+            className="glass-card"
+            style={{
+              padding: '1.75rem 2rem',
+              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.15) 0%, rgba(11, 19, 43, 0.95) 100%)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#38BDF8', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                  <Sliders size={15} /> Dynamic Field Barrier Simulator
+                </div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#FFFFFF' }}>
+                  "What-If" Precursor Control Simulation
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                  Toggle operational barriers to simulate real-time precursor mitigation and residual risk reduction.
+                </p>
+              </div>
+
+              {/* Live Mitigated Score Counter */}
+              {(() => {
+                let reduction = 0;
+                if (mitigations.ptw) reduction += 18;
+                if (mitigations.ppe) reduction += 14;
+                if (mitigations.loto) reduction += 22;
+                if (mitigations.gasTesting) reduction += 18;
+                if (mitigations.fallProtection) reduction += 20;
+
+                const baseScore = result.risk_score || 0;
+                const mitigated = Math.max(8, baseScore - reduction);
+                const percentReduced = baseScore > 0 ? Math.round(((baseScore - mitigated) / baseScore) * 100) : 0;
+                const isDefused = mitigated < 50;
+
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', background: '#070D1E', padding: '0.75rem 1.25rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>
+                        Simulated Risk
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
+                        <span style={{ fontSize: '1.75rem', fontWeight: '800', color: mitigated < 25 ? '#10B981' : mitigated < 50 ? '#F59E0B' : '#EF4444' }}>
+                          {mitigated}
+                        </span>
+                        <span style={{ fontSize: '0.8rem', color: '#64748B' }}>/100</span>
+                      </div>
+                    </div>
+
+                    <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '1rem' }}>
+                      <span style={{ fontSize: '0.7rem', color: '#38BDF8', fontWeight: '800', display: 'block' }}>
+                        -{percentReduced}% RISK
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: isDefused ? '#10B981' : '#F59E0B' }}>
+                        {isDefused ? '● SIF Mitigated' : '▲ Residual SIF'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Barrier Checkboxes */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem', marginTop: '1.25rem' }}>
+              {[
+                { id: 'ptw', label: 'Permit-to-Work (PTW) Verified', delta: '-18 pts' },
+                { id: 'ppe', label: 'Task-Specific PPE Certified', delta: '-14 pts' },
+                { id: 'loto', label: 'Lockout/Tagout (LOTO) Isolated', delta: '-22 pts' },
+                { id: 'gasTesting', label: 'Continuous Gas Detection Active', delta: '-18 pts' },
+                { id: 'fallProtection', label: '100% Engineered Fall Arrest Rigged', delta: '-20 pts' },
+              ].map((barrier) => {
+                const active = !!mitigations[barrier.id];
+                return (
+                  <div
+                    key={barrier.id}
+                    onClick={() => setMitigations((prev) => ({ ...prev, [barrier.id]: !prev[barrier.id] }))}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.85rem 1rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      background: active ? 'rgba(16, 185, 129, 0.12)' : '#070D1E',
+                      border: active ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255,255,255,0.06)',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <div
+                        style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '4px',
+                          border: active ? '1px solid #10B981' : '1px solid #64748B',
+                          background: active ? '#10B981' : 'transparent',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                        }}
+                      >
+                        {active && <CheckCircle2 size={13} />}
+                      </div>
+                      <span style={{ fontSize: '0.8rem', fontWeight: active ? '700' : '500', color: active ? '#FFFFFF' : '#94A3B8' }}>
+                        {barrier.label}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: active ? '#10B981' : '#64748B' }}>
+                      {barrier.delta}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
