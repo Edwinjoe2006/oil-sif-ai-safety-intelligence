@@ -40,7 +40,6 @@ backend/data/*.db
 !backend/data/.gitkeep
 
 # Machine Learning Artifacts (Large binary models)
-backend/models/*.joblib
 !backend/models/.gitkeep
 
 # Node / Frontend
