@@ -12,7 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
-  Radio
+  Radio,
+  X
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -20,7 +21,9 @@ export default function Sidebar({
   setActivePage,
   collapsed,
   setCollapsed,
-  health
+  health,
+  mobileOpen,
+  setMobileOpen
 }) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -35,6 +38,7 @@ export default function Sidebar({
 
   return (
     <aside
+      className={`sidebar-container ${mobileOpen ? 'mobile-open' : ''}`}
       style={{
         width: collapsed ? '80px' : '260px',
         backgroundColor: '#091124',
@@ -86,19 +90,30 @@ export default function Sidebar({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setCollapsed(!collapsed)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#64748B',
-              cursor: 'pointer',
-              display: collapsed ? 'none' : 'flex',
-            }}
-          >
-            <ChevronLeft size={18} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              type="button"
+              className="mobile-close-btn"
+              onClick={() => setMobileOpen && setMobileOpen(false)}
+              aria-label="Close menu"
+            >
+              <X size={20} />
+            </button>
+            <button
+              type="button"
+              className="desktop-collapse-btn"
+              onClick={() => setCollapsed(!collapsed)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#64748B',
+                cursor: 'pointer',
+                display: collapsed ? 'none' : 'flex',
+              }}
+            >
+              <ChevronLeft size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Navigation Links */}
@@ -111,7 +126,10 @@ export default function Sidebar({
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setActivePage(item.id)}
+                onClick={() => {
+                  setActivePage(item.id);
+                  if (setMobileOpen) setMobileOpen(false);
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',

@@ -15,6 +15,7 @@ export default function App() {
   const [activePage, setActivePage] = useState('dashboard');
   const [selectedReportId, setSelectedReportId] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [health, setHealth] = useState(null);
 
   useEffect(() => {
@@ -34,29 +35,48 @@ export default function App() {
   const navigateToReport = (reportId) => {
     setSelectedReportId(reportId);
     setActivePage('report-details');
+    setMobileOpen(false);
   };
 
   const navigateToAnalyze = () => {
     setActivePage('analyze');
+    setMobileOpen(false);
   };
 
   return (
     <div className="app-container">
+      {/* Mobile Drawer Backdrop */}
+      {mobileOpen && (
+        <div
+          className="mobile-backdrop"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Collapsible Industrial Sidebar */}
       <Sidebar
         activePage={activePage === 'report-details' ? 'reports' : activePage}
         setActivePage={(page) => {
           setActivePage(page);
           if (page !== 'report-details') setSelectedReportId(null);
+          setMobileOpen(false);
         }}
         collapsed={collapsed}
         setCollapsed={setCollapsed}
         health={health}
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
       />
 
       {/* Main Content Area */}
       <div className="main-content">
-        <TopNavbar activePage={activePage} health={health} />
+        <TopNavbar
+          activePage={activePage}
+          health={health}
+          mobileOpen={mobileOpen}
+          onToggleMobileMenu={() => setMobileOpen(!mobileOpen)}
+        />
 
         <main style={{ flex: 1 }}>
           {activePage === 'dashboard' && (
