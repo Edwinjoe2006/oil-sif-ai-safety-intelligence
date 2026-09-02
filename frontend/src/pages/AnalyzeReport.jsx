@@ -75,25 +75,128 @@ const DEMO_SCENARIOS = [
 ];
 
 export default function AnalyzeReport({ onNavigateToReport }) {
-  const [reportText, setReportText] = useState('');
-  const [reportType, setReportType] = useState('Unsafe Condition');
-  const [location, setLocation] = useState('Offshore Rig 4 - Deck Area');
+  const [reportText, setReportText] = useState(() => {
+    try {
+      return localStorage.getItem('oil_sif_draft_text') || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [reportType, setReportType] = useState(() => {
+    try {
+      return localStorage.getItem('oil_sif_draft_type') || 'Unsafe Condition';
+    } catch {
+      return 'Unsafe Condition';
+    }
+  });
+
+  const [location, setLocation] = useState(() => {
+    try {
+      return localStorage.getItem('oil_sif_draft_location') || 'Offshore Rig 4 - Deck Area';
+    } catch {
+      return 'Offshore Rig 4 - Deck Area';
+    }
+  });
+
   const [loading, setLoading] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(() => {
+    try {
+      const saved = localStorage.getItem('oil_sif_last_analysis_result');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [error, setError] = useState(null);
-  const [completedActions, setCompletedActions] = useState({});
+  const [completedActions, setCompletedActions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('oil_sif_completed_actions');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(true);
 
   // What-If Barrier Simulation State
-  const [mitigations, setMitigations] = useState({
-    ptw: false,
-    ppe: false,
-    loto: false,
-    gasTesting: false,
-    fallProtection: false,
+  const [mitigations, setMitigations] = useState(() => {
+    try {
+      const saved = localStorage.getItem('oil_sif_mitigations');
+      return saved ? JSON.parse(saved) : {
+        ptw: false,
+        ppe: false,
+        loto: false,
+        gasTesting: false,
+        fallProtection: false,
+      };
+    } catch {
+      return {
+        ptw: false,
+        ppe: false,
+        loto: false,
+        gasTesting: false,
+        fallProtection: false,
+      };
+    }
   });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('oil_sif_draft_text', reportText);
+    } catch {}
+  }, [reportText]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('oil_sif_draft_type', reportType);
+    } catch {}
+  }, [reportType]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('oil_sif_draft_location', location);
+    } catch {}
+  }, [location]);
+
+  useEffect(() => {
+    try {
+      if (result) {
+        localStorage.setItem('oil_sif_last_analysis_result', JSON.stringify(result));
+      } else {
+        localStorage.removeItem('oil_sif_last_analysis_result');
+      }
+    } catch {}
+  }, [result]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('oil_sif_completed_actions', JSON.stringify(completedActions));
+    } catch {}
+  }, [completedActions]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('oil_sif_mitigations', JSON.stringify(mitigations));
+    } catch {}
+  }, [mitigations]);
+
+  const handleClearAnalysis = () => {
+    setResult(null);
+    setReportText('');
+    setCompletedActions({});
+    setMitigations({ ptw: false, ppe: false, loto: false, gasTesting: false, fallProtection: false });
+    try {
+      localStorage.removeItem('oil_sif_last_analysis_result');
+      localStorage.removeItem('oil_sif_draft_text');
+      localStorage.removeItem('oil_sif_completed_actions');
+      localStorage.removeItem('oil_sif_mitigations');
+    } catch {}
+  };
 
   const toggleVoiceDictation = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -149,6 +252,9 @@ export default function AnalyzeReport({ onNavigateToReport }) {
     setResult(null);
     setError(null);
     setMitigations({ ptw: false, ppe: false, loto: false, gasTesting: false, fallProtection: false });
+    try {
+      localStorage.removeItem('oil_sif_last_analysis_result');
+    } catch {}
   };
 
   const handleAnalyze = async (e) => {
@@ -338,7 +444,17 @@ export default function AnalyzeReport({ onNavigateToReport }) {
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {(reportText || result) && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleClearAnalysis}
+                disabled={loading}
+              >
+                Clear / New Observation
+              </button>
+            )}
             <button
               type="submit"
               className="btn btn-primary"

@@ -12,11 +12,46 @@ import Settings from './pages/Settings';
 import { api } from './services/api';
 
 export default function App() {
-  const [activePage, setActivePage] = useState('dashboard');
-  const [selectedReportId, setSelectedReportId] = useState(null);
+  const [activePage, setActivePage] = useState(() => {
+    try {
+      return localStorage.getItem('oil_sif_active_page') || 'dashboard';
+    } catch {
+      return 'dashboard';
+    }
+  });
+
+  const [selectedReportId, setSelectedReportId] = useState(() => {
+    try {
+      const id = localStorage.getItem('oil_sif_selected_report_id');
+      return id ? Number(id) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [health, setHealth] = useState(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('oil_sif_active_page', activePage);
+    } catch (err) {
+      console.warn('Failed to save active page:', err);
+    }
+  }, [activePage]);
+
+  useEffect(() => {
+    try {
+      if (selectedReportId) {
+        localStorage.setItem('oil_sif_selected_report_id', String(selectedReportId));
+      } else {
+        localStorage.removeItem('oil_sif_selected_report_id');
+      }
+    } catch (err) {
+      console.warn('Failed to save selected report id:', err);
+    }
+  }, [selectedReportId]);
 
   useEffect(() => {
     async function loadHealth() {

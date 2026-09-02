@@ -34,9 +34,8 @@ venv.bak/
 .env.local
 
 # Databases & Cache
-*.db
 *.sqlite3
-backend/data/*.db
+!backend/data/oil_sif_safety.db
 !backend/data/.gitkeep
 
 # Machine Learning Artifacts (Large binary models)
