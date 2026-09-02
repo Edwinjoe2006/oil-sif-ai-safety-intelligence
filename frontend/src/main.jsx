@@ -19,13 +19,11 @@ class ErrorBoundary extends React.Component {
 
   handleReset = () => {
     try {
-      localStorage.removeItem('oil_sif_last_analysis_result');
-      localStorage.removeItem('oil_sif_active_page');
-      localStorage.removeItem('oil_sif_selected_report_id');
-      localStorage.removeItem('oil_sif_completed_actions');
-      localStorage.removeItem('oil_sif_mitigations');
+      localStorage.clear();
+      sessionStorage.clear();
     } catch {}
-    window.location.href = '/';
+    this.setState({ hasError: false, error: null });
+    window.location.href = window.location.origin;
   };
 
   render() {
@@ -42,7 +40,7 @@ class ErrorBoundary extends React.Component {
           fontFamily: 'Inter, -apple-system, sans-serif'
         }}>
           <div style={{
-            maxWidth: '520px',
+            maxWidth: '560px',
             width: '100%',
             background: '#0B132B',
             borderRadius: '16px',
@@ -69,9 +67,25 @@ class ErrorBoundary extends React.Component {
             <h2 style={{ fontSize: '1.35rem', fontWeight: '800', marginBottom: '0.75rem', color: '#FFFFFF' }}>
               Safety Dashboard Recovery
             </h2>
-            <p style={{ fontSize: '0.875rem', color: '#94A3B8', marginBottom: '1.75rem', lineHeight: 1.6 }}>
-              A temporary runtime state conflict was intercepted. Click below to clear stored draft state and return to the main dashboard.
+            <p style={{ fontSize: '0.875rem', color: '#94A3B8', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+              A temporary runtime state conflict was intercepted. Click below to reset stored draft state and return to the main dashboard.
             </p>
+            {this.state.error?.message && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: '8px',
+                padding: '0.75rem 1rem',
+                fontSize: '0.8rem',
+                color: '#FCA5A5',
+                marginBottom: '1.5rem',
+                textAlign: 'left',
+                fontFamily: 'monospace',
+                wordBreak: 'break-word',
+              }}>
+                {this.state.error.message}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <button
                 type="button"
