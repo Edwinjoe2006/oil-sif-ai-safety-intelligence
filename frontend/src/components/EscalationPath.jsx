@@ -35,9 +35,18 @@ export default function EscalationPath({ pathway = [] }) {
 
       {/* Vertical Steps */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', position: 'relative' }}>
-        {pathway.map((step, idx) => {
+        {pathway.map((rawStep, idx) => {
+          const step = typeof rawStep === 'string'
+            ? { step_number: idx + 1, stage: `Stage ${idx + 1}`, description: rawStep }
+            : {
+                step_number: rawStep?.step_number || idx + 1,
+                stage: rawStep?.stage || `Stage ${idx + 1}`,
+                description: rawStep?.description || rawStep?.stage || '',
+              };
+
+          const stageStr = String(step.stage || '');
           const isLast = idx === pathway.length - 1;
-          const isCritical = isLast || step.stage.includes('Major') || step.stage.includes('SIF');
+          const isCritical = isLast || stageStr.includes('Major') || stageStr.includes('SIF') || stageStr.includes('Critical');
 
           return (
             <div key={idx} style={{ display: 'flex', gap: '1.25rem', position: 'relative' }}>

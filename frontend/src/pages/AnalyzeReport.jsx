@@ -569,7 +569,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                 </div>
               </div>
               <div style={{ marginTop: '1.25rem', fontSize: '0.85rem', color: '#CBD5E1' }}>
-                SIF Model Confidence: <strong style={{ color: '#F8FAFC' }}>{(result.sif_probability * 100).toFixed(1)}%</strong>
+                SIF Model Confidence: <strong style={{ color: '#F8FAFC' }}>{(Number(result.sif_probability ?? 0.85) * 100).toFixed(1)}%</strong>
               </div>
             </div>
 
@@ -583,7 +583,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                   {result.hazard_category}
                 </div>
                 <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                  Classification probability: {(result.hazard_probability * 100).toFixed(1)}%
+                  Classification probability: {(Number(result.hazard_probability ?? 0.90) * 100).toFixed(1)}%
                 </span>
               </div>
 

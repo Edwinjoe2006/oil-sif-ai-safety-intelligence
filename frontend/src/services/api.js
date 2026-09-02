@@ -155,35 +155,12 @@ export const api = {
 
   // Analyze
   analyzeReport: async (payload) => {
-    let result;
-    try {
-      const res = await fetch(`${API_BASE}/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      result = await handleResponse(res);
-    } catch (err) {
-      console.warn('Backend analyze unavailable, using local synthesis:', err.message);
-      // Fallback local report creation
-      result = {
-        id: Date.now(),
-        sif_precursor: /leak|vessel|confined|pressure|unprotected|high voltage/i.test(payload.report_text),
-        sif_probability: 0.86,
-        hazard_category: /leak|gas/i.test(payload.report_text) ? 'Flammable Liquids & Gas' : 'General Safety',
-        hazard_probability: 0.91,
-        severity: 'High',
-        severity_probability: 0.88,
-        risk_score: 76,
-        risk_level: 'CRITICAL',
-        detected_factors: ['Worker Exposure', 'Loss of Containment'],
-        potential_consequences: ['Flammable vapor release', 'Flash fire hazard'],
-        recommended_action: ['Isolate source valve immediately', 'Deploy atmospheric gas detection'],
-        escalation_path: ['Initial Observation', 'Containment Loss', 'SIF Critical Alert'],
-        similar_reports: [],
-        created_at: new Date().toISOString(),
-      };
-    }
+    const res = await fetch(`${API_BASE}/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await handleResponse(res);
 
     // Persist analyzed report
     const reportRecord = {
@@ -192,11 +169,11 @@ export const api = {
       report_type: payload.report_type || 'Unsafe Condition',
       location: payload.location || 'Operational Asset',
       sif_prediction: result.sif_precursor,
-      sif_probability: result.sif_probability || 0.85,
+      sif_probability: result.sif_probability ?? 0.85,
       hazard_category: result.hazard_category || 'General Safety',
-      hazard_probability: result.hazard_probability || 0.9,
+      hazard_probability: result.hazard_probability ?? 0.9,
       severity: result.severity || 'Medium',
-      severity_probability: result.severity_probability || 0.85,
+      severity_probability: result.severity_probability ?? 0.85,
       risk_score: result.risk_score || 50,
       risk_level: result.risk_level || 'MEDIUM',
       detected_factors: result.detected_factors || [],
