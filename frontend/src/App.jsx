@@ -8,6 +8,7 @@ import ReportDetails from './pages/ReportDetails';
 import EmergingRisks from './pages/EmergingRisks';
 import HazardIntelligence from './pages/HazardIntelligence';
 import ModelPerformance from './pages/ModelPerformance';
+import RiskPriorityQueue from './pages/RiskPriorityQueue';
 import Settings from './pages/Settings';
 import { api } from './services/api';
 
@@ -140,7 +141,7 @@ export default function App() {
           )}
 
           {activePage === 'priority' && (
-            <ReportsExplorer
+            <RiskPriorityQueue
               onNavigateToReport={navigateToReport}
               onNavigateToAnalyze={navigateToAnalyze}
             />
