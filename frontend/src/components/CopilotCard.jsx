@@ -32,12 +32,13 @@ export default function CopilotCard({ copilot }) {
 
   const quickPrompts = [
     "Why is this dangerous?",
-    "Why was this classified as SIF?",
-    "What are the main risk factors?",
-    "What should the safety officer verify?",
-    "Are similar reports present?",
+    "Why is this a SIF precursor?",
+    "What caused the high risk?",
+    "What should I check?",
+    "Have similar reports occurred?",
     "What changed recently?",
-    "What corrective actions are still open?"
+    "What controls should be considered?",
+    "Which corrective actions are still open?"
   ];
 
   return (

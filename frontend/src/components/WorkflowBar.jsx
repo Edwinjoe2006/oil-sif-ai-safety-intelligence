@@ -89,7 +89,7 @@ export default function WorkflowBar({ activeStep, onStepClick, compact = false }
                 </span>
               </div>
               {idx < WORKFLOW_STEPS.length - 1 && (
-                <span style={{ color: '#475569', fontSize: '0.7rem', fontWeight: '700' }}>?</span>
+                <span style={{ color: '#475569', fontSize: '0.75rem', fontWeight: '700' }}>&rarr;</span>
               )}
             </React.Fragment>
           );

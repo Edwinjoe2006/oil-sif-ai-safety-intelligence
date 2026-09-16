@@ -223,13 +223,51 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport, onO
         </div>
       </div>
 
+      {/* Simple Visual Flow for Judges & Safety Officers */}
+      <div
+        className="glass-card"
+        style={{
+          padding: '0.85rem 1.5rem',
+          marginBottom: '1.75rem',
+          background: '#091124',
+          border: '1px solid rgba(56, 189, 248, 0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+        }}
+      >
+        <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#38BDF8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          Safety Decision Flow:
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          {[
+            { label: 'REPORT', desc: 'Field observation logged', color: '#94A3B8' },
+            { label: 'AI ANALYSIS', desc: 'Hazard & SIF detection', color: '#38BDF8' },
+            { label: 'RISK LEVEL', desc: '0–100 risk score', color: '#F59E0B' },
+            { label: 'WHY?', desc: 'Root factors & barriers', color: '#F97316' },
+            { label: 'RECOMMENDED ACTION', desc: 'CAPA & control directives', color: '#10B981' },
+          ].map((item, idx, arr) => (
+            <React.Fragment key={idx}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.03)', padding: '0.3rem 0.65rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.color }} />
+                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#FFFFFF' }}>{item.label}</span>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>({item.desc})</span>
+              </div>
+              {idx < arr.length - 1 && <span style={{ color: '#475569', fontSize: '0.75rem', fontWeight: '700' }}>&rarr;</span>}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
       {/* Top 6 KPI Cards - Structured: VALUE -> STATUS -> SHORT MEANING */}
       <div className="grid-6" style={{ marginBottom: '2rem' }}>
         <KpiCard
-          title="Total Reports"
+          title="Total Safety Reports"
           value={stats?.total_reports}
           status={stats?.total_reports ? "STORED IN DB" : "NO REPORTS"}
-          meaning="Total safety observations and near-misses recorded."
+          meaning="Reports analyzed by the system."
           icon={Activity}
           color="#38BDF8"
           tooltipText="Total count of verified safety observations loaded in the database."
@@ -238,30 +276,30 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport, onO
           title="SIF Precursors"
           value={stats?.sif_precursors_count}
           status={stats?.sif_precursors_count > 0 ? "ATTENTION REQUIRED" : "ZERO DETECTED"}
-          meaning="Reports containing patterns associated with potential SIF events."
+          meaning="Reports showing possible serious-injury/fatality precursors."
           trend={stats?.total_reports ? `${Math.round((stats.sif_precursors_count / stats.total_reports) * 100)}% Rate` : undefined}
           icon={ShieldAlert}
           color="#EF4444"
           tooltipTerm="sif"
         />
         <KpiCard
-          title="High/Critical Reports"
+          title="High / Critical Risks"
           value={stats?.high_critical_count}
           status={stats?.high_critical_count > 0 ? "REQUIRING ATTENTION" : "NORMAL"}
-          meaning="Reports with high model-based risk scores (>= 50)."
+          meaning="Reports requiring priority review."
           icon={Flame}
           color="#F97316"
           tooltipText="Safety incidents flagged for priority investigation and control validation."
         />
         <KpiCard
-          title="Average Risk Score"
+          title="Average Risk"
           value={stats?.average_risk_score !== undefined && stats?.average_risk_score !== null ? `${stats.average_risk_score} / 100` : null}
           status={
             stats?.average_risk_score >= 75 ? "CRITICAL FLEET RISK" :
             stats?.average_risk_score >= 50 ? "ELEVATED FLEET RISK" :
             stats?.average_risk_score >= 25 ? "MODERATE" : "OPTIMAL"
           }
-          meaning="Fleet-wide 0–100 index prioritizing inspection urgency."
+          meaning="Overall risk score from analyzed reports."
           icon={AlertTriangle}
           color="#F59E0B"
           tooltipTerm="risk_score"
@@ -269,8 +307,8 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport, onO
         <KpiCard
           title="Open Actions"
           value={stats?.open_corrective_actions}
-          status={stats?.open_corrective_actions > 0 ? "PENDING ACTION" : "ALL RESOLVED"}
-          meaning="Field corrective actions currently pending human completion."
+          status={stats?.open_corrective_actions > 0 ? "PENDING ATTENTION" : "ALL RESOLVED"}
+          meaning="Safety actions still requiring attention."
           icon={CheckSquare}
           color="#818CF8"
           tooltipTerm="capa"
@@ -279,7 +317,7 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport, onO
           title="Emerging Risks"
           value={stats?.emerging_risks_count}
           status={stats?.emerging_risks_count > 0 ? "ELEVATED" : "NORMAL"}
-          meaning="Patterns showing increasing precursor activity over time."
+          meaning="Areas where repeated or increasing safety concerns were detected."
           icon={TrendingUp}
           color="#34D399"
           tooltipTerm="emerging_risk"

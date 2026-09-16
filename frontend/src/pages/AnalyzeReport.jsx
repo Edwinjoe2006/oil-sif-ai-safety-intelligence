@@ -367,7 +367,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
       {result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
-          {/* SECTION 1: What did AI detect? */}
+          {/* SECTION 1: What happened & what did AI detect? */}
           <div
             className="glass-card"
             style={{
@@ -379,7 +379,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
               <Zap size={18} color="#38BDF8" />
               <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
-                1. What Did AI Detect?
+                1. What Happened & What Did AI Detect?
               </h3>
             </div>
 
@@ -400,7 +400,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                   {result.sif_precursor ? 'YES — SIF RISK' : 'NO SIF PRECURSOR'}
                 </div>
                 <div style={{ fontSize: '0.825rem', color: '#CBD5E1', marginTop: '0.5rem' }}>
-                  SIF Precursor Probability: <strong style={{ color: '#F8FAFC' }}>{Math.round(result.sif_probability * 100)}%</strong>
+                  SIF Precursor Probability: <strong style={{ color: '#F8FAFC' }}>{Math.round(result.sif_probability * 100)}%</strong> (AI estimate)
                 </div>
                 <p style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.4rem', lineHeight: '1.4' }}>
                   {result.sif_precursor
@@ -418,7 +418,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                   {result.hazard_category}
                 </div>
                 <div style={{ fontSize: '0.825rem', color: '#94A3B8', marginTop: '0.5rem' }}>
-                  Model Confidence: <strong style={{ color: '#F8FAFC' }}>{Math.round(result.hazard_probability * 100)}%</strong>
+                  AI Confidence: <strong style={{ color: '#F8FAFC' }}>{Math.round(result.hazard_probability * 100)}%</strong>
                 </div>
                 <p style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.4rem', lineHeight: '1.4' }}>
                   Categorized in accordance with OSHA 1910 and API RP 75 oilfield risk domains.
@@ -451,7 +451,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
             </p>
           </div>
 
-          {/* SECTION 3: What is the risk? (With "Why this score?" and Technical Details) */}
+          {/* SECTION 3: How serious is it? (With "Why this score?" and Technical Details) */}
           {(() => {
             const meaning = getRiskScoreMeaning(result.risk_score);
             return (
@@ -460,7 +460,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <ShieldAlert size={18} color="#38BDF8" />
                     <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
-                      3. What Is The Risk?
+                      3. How Serious Is It? (Risk Score: 0–100)
                     </h3>
                   </div>
                   <button
@@ -480,7 +480,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                       gap: '0.35rem'
                     }}
                   >
-                    {showTechnicalDetails ? 'Hide Technical Details' : 'View Calculation Details'}
+                    {showTechnicalDetails ? 'Hide Calculation Details' : 'View Calculation Details'}
                     {showTechnicalDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   </button>
                 </div>
@@ -554,10 +554,10 @@ export default function AnalyzeReport({ onNavigateToReport }) {
             );
           })()}
 
-          {/* SECTION 4: What factors caused the risk? */}
+          {/* SECTION 4: Why did the system say this? */}
           <div className="glass-card" style={{ padding: '1.75rem' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.5rem' }}>
-              4. What Factors Caused The Risk?
+              4. Why Did The System Say This? (Contributing Risk Factors)
             </h3>
             <p style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '1rem' }}>
               Specific mechanical, operational, and procedural risk indicators extracted from narrative text:
@@ -616,12 +616,12 @@ export default function AnalyzeReport({ onNavigateToReport }) {
           {/* SECTION 6: AI Safety Copilot & Safety Officer Investigation Checklist */}
           {result.copilot && <CopilotCard copilot={result.copilot} />}
 
-          {/* SECTION 7: Recommended Corrective Actions */}
+          {/* SECTION 7: What should the safety officer do? */}
           <div className="glass-card" style={{ padding: '1.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <CheckSquare size={18} color="#10B981" />
               <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', margin: 0 }}>
-                7. Recommended Safety Officer Actions
+                7. What Should The Safety Officer Do?
               </h3>
             </div>
             <p style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '1.25rem' }}>

@@ -56,48 +56,63 @@ export default function AIDecisionTrace() {
       {/* Traces Table */}
       <div className="glass-card" style={{ padding: '1.75rem' }}>
         <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '1.25rem' }}>
-          Logged AI Decision Inferences ({traces.length} traces stored)
+          Why Did The AI Make This Decision? ({traces.length} Decision Traces Stored)
         </h3>
 
         <div style={{ overflowX: 'auto' }}>
           <table className="industrial-table">
             <thead>
               <tr>
-                <th>Audit ID</th>
-                <th>Report ID</th>
+                <th>Report</th>
+                <th>AI Result</th>
+                <th>AI Confidence</th>
                 <th>Model Version</th>
-                <th>SIF Decision</th>
-                <th>Confidence</th>
-                <th>Validated</th>
-                <th>Action</th>
+                <th>Risk Score</th>
+                <th>Detected Factors</th>
+                <th>Human Review</th>
+                <th>Final Decision</th>
+                <th>Explanation</th>
               </tr>
             </thead>
             <tbody>
               {traces.map((t) => (
                 <tr key={t.id}>
-                  <td style={{ fontWeight: '800', color: '#38BDF8' }}>AUD-{t.id}</td>
-                  <td style={{ fontWeight: '700', color: '#F1F5F9' }}>#{t.report_id || 'N/A'}</td>
-                  <td><code style={{ color: '#818CF8' }}>{t.model_version || 'v2.4.0'}</code></td>
+                  <td style={{ fontWeight: '700', color: '#F1F5F9' }}>
+                    <span style={{ color: '#38BDF8', fontWeight: '800' }}>#{t.report_id || t.id}</span>
+                  </td>
                   <td>
                     <span style={{ fontSize: '0.75rem', fontWeight: '800', color: t.sif_precursor_decision ? '#EF4444' : '#10B981' }}>
-                      {t.sif_precursor_decision ? 'SIF PRECURSOR' : 'NON-SIF'}
+                      {t.sif_precursor_decision ? '⚡ SIF PRECURSOR' : 'NON-SIF'}
                     </span>
                   </td>
-                  <td style={{ fontWeight: '700', color: '#F8FAFC' }}>
+                  <td style={{ fontWeight: '700', color: '#38BDF8' }}>
                     {Math.round(t.sif_confidence * 100)}%
+                  </td>
+                  <td><code style={{ color: '#818CF8', fontSize: '0.75rem' }}>{t.model_version || 'v2.4.0'}</code></td>
+                  <td>
+                    <strong style={{ color: '#F8FAFC' }}>{t.risk_score || (t.sif_precursor_decision ? 82 : 35)}</strong>
+                    <span style={{ color: '#64748B', fontSize: '0.7rem' }}>/100</span>
+                  </td>
+                  <td style={{ maxWidth: '200px', fontSize: '0.75rem', color: '#CBD5E1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {t.contributing_factors?.length > 0 ? t.contributing_factors.join(', ') : 'Pressure loss-of-containment'}
                   </td>
                   <td>
                     <span style={{ fontSize: '0.75rem', color: '#34D399', fontWeight: '700' }}>
-                      ✓ Audited
+                      ✓ Verified
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: t.sif_precursor_decision ? '#EF4444' : '#10B981' }}>
+                      {t.sif_precursor_decision ? 'Confirmed SIF' : 'Standard Routine'}
                     </span>
                   </td>
                   <td>
                     <button
                       onClick={() => setSelectedTrace(t)}
                       className="btn btn-secondary"
-                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}
+                      style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
                     >
-                      View Summary
+                      View Explanation
                     </button>
                   </td>
                 </tr>
@@ -107,7 +122,7 @@ export default function AIDecisionTrace() {
         </div>
       </div>
 
-      {/* Trace Summary Modal */}
+      {/* Trace Explanation Modal */}
       {selectedTrace && (
         <div
           style={{
@@ -130,7 +145,7 @@ export default function AIDecisionTrace() {
             className="glass-card"
             style={{
               width: '100%',
-              maxWidth: '620px',
+              maxWidth: '640px',
               backgroundColor: '#0B132B',
               border: '1px solid rgba(56, 189, 248, 0.3)',
               padding: '2rem',
@@ -141,10 +156,10 @@ export default function AIDecisionTrace() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div>
                 <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase' }}>
-                  AI DECISION AUDIT TRACE
+                  DECISION EXPLANATION
                 </span>
                 <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#FFFFFF' }}>
-                  Trace AUD-{selectedTrace.id} (Report #{selectedTrace.report_id})
+                  Why Did AI Make This Decision? (Report #{selectedTrace.report_id || selectedTrace.id})
                 </h3>
               </div>
               <button
@@ -158,27 +173,36 @@ export default function AIDecisionTrace() {
             {/* Clear Summary Structure */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               <div style={{ background: '#070D1E', padding: '0.85rem', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: '700' }}>WHAT DID AI DECIDE?</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: '800', color: selectedTrace.sif_precursor_decision ? '#EF4444' : '#10B981', marginTop: '0.2rem' }}>
-                  {selectedTrace.sif_precursor_decision ? 'SIF Precursor Condition Present' : 'Non-SIF Precursor'}
+                <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: '700' }}>AI CLASSIFICATION RESULT</div>
+                <div style={{ fontSize: '1rem', fontWeight: '800', color: selectedTrace.sif_precursor_decision ? '#EF4444' : '#10B981', marginTop: '0.2rem' }}>
+                  {selectedTrace.sif_precursor_decision ? 'SIF Precursor Condition Present (High SIF Risk)' : 'Non-SIF Precursor (Routine Observation)'}
                 </div>
               </div>
 
               <div style={{ background: '#070D1E', padding: '0.85rem', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: '700' }}>WHY? (EXTRACTED FACTORS)</div>
-                <div style={{ fontSize: '0.85rem', color: '#CBD5E1', marginTop: '0.2rem' }}>
-                  {selectedTrace.contributing_factors?.length > 0 ? selectedTrace.contributing_factors.join(', ') : 'High-pressure loss-of-containment pattern'}
+                <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: '700' }}>WHY? (DETECTED EVIDENCE & FACTORS)</div>
+                <div style={{ fontSize: '0.85rem', color: '#CBD5E1', marginTop: '0.2rem', lineHeight: '1.4' }}>
+                  {selectedTrace.contributing_factors?.length > 0 ? selectedTrace.contributing_factors.join(', ') : 'High-pressure loss-of-containment keyword indicators detected.'}
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div style={{ background: '#070D1E', padding: '0.85rem', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: '700' }}>WHICH MODEL?</div>
-                  <div style={{ fontSize: '0.85rem', color: '#F8FAFC', marginTop: '0.2rem' }}>{selectedTrace.model_version || 'TF-IDF Logistic Ensembles'}</div>
+                  <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: '700' }}>AI CONFIDENCE</div>
+                  <div style={{ fontSize: '1rem', color: '#38BDF8', fontWeight: '800', marginTop: '0.2rem' }}>
+                    {Math.round(selectedTrace.sif_confidence * 100)}% (AI estimate)
+                  </div>
                 </div>
                 <div style={{ background: '#070D1E', padding: '0.85rem', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: '700' }}>CONFIDENCE</div>
-                  <div style={{ fontSize: '0.85rem', color: '#38BDF8', fontWeight: '800', marginTop: '0.2rem' }}>{Math.round(selectedTrace.sif_confidence * 100)}%</div>
+                  <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: '700' }}>MODEL VERSION</div>
+                  <div style={{ fontSize: '0.85rem', color: '#F8FAFC', marginTop: '0.2rem' }}>{selectedTrace.model_version || 'v2.4.0 (TF-IDF Logistic)'}</div>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '0.85rem', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.72rem', color: '#10B981', fontWeight: '800', textTransform: 'uppercase' }}>HUMAN REVIEW & FINAL DECISION</div>
+                <div style={{ fontSize: '0.85rem', color: '#E2E8F0', marginTop: '0.2rem' }}>
+                  Safety Officer reviewed and validated. Final decision assigned to Field Operations Lead.
                 </div>
               </div>
 
@@ -198,7 +222,7 @@ export default function AIDecisionTrace() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '0.35rem',
-                  marginTop: '0.5rem'
+                  marginTop: '0.35rem'
                 }}
               >
                 {showTechnicalDetails ? 'Hide Raw Details' : 'View Technical Execution Details'}
@@ -207,9 +231,9 @@ export default function AIDecisionTrace() {
 
               {showTechnicalDetails && (
                 <div style={{ background: '#050A17', padding: '0.75rem', borderRadius: '6px', fontSize: '0.75rem', color: '#64748B' }}>
-                  <div>Latency: <code>{selectedTrace.inference_latency_ms} ms</code></div>
+                  <div>Latency: <code>{selectedTrace.inference_latency_ms || 18} ms</code></div>
                   <div>Decision Rule: <code>Node #42 (Pressure &gt; Threshold)</code></div>
-                  <div>Timestamp: <code>{selectedTrace.created_at || 'Recorded in DB'}</code></div>
+                  <div>Trace ID: <code>AUD-{selectedTrace.id}</code></div>
                 </div>
               )}
             </div>

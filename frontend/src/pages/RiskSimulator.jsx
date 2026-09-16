@@ -168,36 +168,50 @@ export default function RiskSimulator() {
               SIMULATED RISK ASSESSMENT
             </span>
 
+            {/* Current vs Simulated Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem', marginBottom: '1.25rem' }}>
               <div style={{ background: '#070D1E', padding: '1rem', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700' }}>CURRENT BASELINE RISK</div>
-                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: '#94A3B8' }}>{baselineRisk} / 100</div>
+                <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: '700' }}>CURRENT SITUATION</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: '#CBD5E1', marginTop: '0.2rem' }}>{baselineRisk} / 100</div>
               </div>
               <div style={{ background: '#070D1E', padding: '1rem', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.72rem', color: '#38BDF8', fontWeight: '700' }}>SIMULATED RISK</div>
-                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: simulatedRisk >= 75 ? '#EF4444' : simulatedRisk >= 50 ? '#F97316' : '#10B981' }}>
+                <div style={{ fontSize: '0.72rem', color: '#38BDF8', fontWeight: '700' }}>SIMULATED SITUATION</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: simulatedRisk >= 75 ? '#EF4444' : simulatedRisk >= 50 ? '#F97316' : '#10B981', marginTop: '0.2rem' }}>
                   {simulatedRisk} / 100
                 </div>
               </div>
             </div>
 
-            {/* Delta points */}
-            <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '0.825rem', color: '#CBD5E1', fontWeight: '600' }}>Risk Score Delta:</span>
-              <strong style={{ fontSize: '1rem', color: riskDelta > 0 ? '#EF4444' : '#10B981' }}>
-                {riskDelta > 0 ? `+${riskDelta}` : `${riskDelta}`} points
+            {/* Change / Delta */}
+            <div style={{ background: 'rgba(15, 23, 42, 0.7)', padding: '0.85rem 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <span style={{ fontSize: '0.85rem', color: '#CBD5E1', fontWeight: '700' }}>CHANGE:</span>
+              <strong style={{ fontSize: '1.1rem', color: riskDelta > 0 ? '#EF4444' : (riskDelta < 0 ? '#10B981' : '#94A3B8') }}>
+                {riskDelta > 0 ? `+${riskDelta} points` : `${riskDelta} points`}
               </strong>
             </div>
 
-            {/* Explanatory notes */}
-            <div style={{ fontSize: '0.825rem', color: '#CBD5E1', lineHeight: '1.4', marginBottom: '1rem' }}>
-              <strong>Selected Change:</strong> {barrier} barrier with {fatigue.toLowerCase()} crew fatigue at {pressure} PSI.
+            {/* WHY DID IT CHANGE? */}
+            <div style={{ background: '#0B132B', padding: '1rem', borderRadius: '8px', marginBottom: '1.25rem', borderLeft: '3px solid #38BDF8' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                WHY DID IT CHANGE?
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.825rem', color: '#E2E8F0' }}>
+                {barrier !== 'Intact' && (
+                  <li>Safety barrier status set to <strong>{barrier}</strong>, increasing escalation vulnerability.</li>
+                )}
+                {barrier === 'Intact' && (
+                  <li>Safety barriers are <strong>Intact</strong>, providing active containment.</li>
+                )}
+                <li>Operating pressure set to <strong>{pressure} PSI</strong> ({pressure > 200 ? 'elevated system pressure' : 'standard operating pressure'}).</li>
+                <li>Crew fatigue condition: <strong>{fatigue} Fatigue</strong> during {shift}.</li>
+                {wind > 25 && <li>High offshore wind velocity (<strong>{wind} knots</strong>) adds environmental operational stress.</li>}
+              </ul>
             </div>
 
             {/* Explicit Disclaimer */}
             <div style={{ padding: '0.75rem', borderRadius: '6px', background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.2)', fontSize: '0.75rem', color: '#38BDF8', lineHeight: '1.4' }}>
               <Info size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-              <strong>Model-based simulation only.</strong> This does not guarantee actual field risk reduction and is designed for engineering what-if scenarios and safety training.
+              <strong>Model-based simulation — not a guarantee of actual field risk reduction.</strong>
             </div>
           </div>
         </div>

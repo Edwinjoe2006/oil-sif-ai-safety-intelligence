@@ -76,16 +76,63 @@ export default function CausalAnalysis() {
         )}
       </div>
 
+      {/* 5-Step Visual Flow */}
+      <div
+        className="glass-card"
+        style={{
+          padding: '0.85rem 1.5rem',
+          marginBottom: '1.75rem',
+          background: '#091124',
+          border: '1px solid rgba(56, 189, 248, 0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+        }}
+      >
+        <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#38BDF8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          Escalation Pathway:
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          {[
+            { label: 'HAZARD', desc: 'Process energy source', color: '#38BDF8' },
+            { label: 'WHAT COULD CAUSE IT?', desc: 'Root threats & failures', color: '#EF4444' },
+            { label: 'LOSS OF CONTROL', desc: 'Top event / breach', color: '#F97316' },
+            { label: 'WHAT COULD HAPPEN?', desc: 'Potential consequences', color: '#F59E0B' },
+            { label: 'SIF POTENTIAL', desc: 'Fatal / severe outcome', color: '#EF4444' },
+          ].map((item, idx, arr) => (
+            <React.Fragment key={idx}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.03)', padding: '0.3rem 0.65rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.color }} />
+                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#FFFFFF' }}>{item.label}</span>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>({item.desc})</span>
+              </div>
+              {idx < arr.length - 1 && <span style={{ color: '#475569', fontSize: '0.75rem', fontWeight: '700' }}>&rarr;</span>}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
       {/* Prevention vs Mitigation Clear Labels */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '1rem', marginBottom: '0.75rem', textAlign: 'center' }}>
-        <div style={{ background: 'rgba(56, 189, 248, 0.12)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(56, 189, 248, 0.25)', fontSize: '0.8rem', fontWeight: '800', color: '#38BDF8' }}>
-          PREVENTION: "What can stop escalation?"
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '1rem', marginBottom: '0.85rem', textAlign: 'center' }}>
+        <div style={{ background: 'rgba(56, 189, 248, 0.12)', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase' }}>
+            HOW CAN WE PREVENT IT?
+          </div>
+          <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>Controls that prevent escalation</span>
         </div>
-        <div style={{ background: 'rgba(239, 68, 68, 0.12)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.25)', fontSize: '0.8rem', fontWeight: '800', color: '#EF4444' }}>
-          TOP EVENT: Loss of Control
+        <div style={{ background: 'rgba(239, 68, 68, 0.12)', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#EF4444', textTransform: 'uppercase' }}>
+            TOP EVENT: LOSS OF CONTROL
+          </div>
+          <span style={{ fontSize: '0.72rem', color: '#FCA5A5' }}>Moment operational containment is lost</span>
         </div>
-        <div style={{ background: 'rgba(16, 185, 129, 0.12)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.25)', fontSize: '0.8rem', fontWeight: '800', color: '#10B981' }}>
-          MITIGATION: "What can reduce consequences?"
+        <div style={{ background: 'rgba(16, 185, 129, 0.12)', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#10B981', textTransform: 'uppercase' }}>
+            HOW CAN WE REDUCE THE CONSEQUENCES?
+          </div>
+          <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>Controls that reduce consequences</span>
         </div>
       </div>
 
@@ -95,12 +142,12 @@ export default function CausalAnalysis() {
           {/* Threats (Left) */}
           <div className="glass-card" style={{ padding: '1rem', borderLeft: '3px solid #EF4444' }}>
             <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#EF4444', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-              1. Root Threats
+              1. What Could Cause It?
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {bowtie.threats.map((t) => (
                 <div key={t.id} style={{ background: '#0B132B', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#EF4444', fontWeight: '800' }}>{t.id} • {t.category}</div>
+                  <div style={{ fontSize: '0.68rem', color: '#EF4444', fontWeight: '800' }}>{t.id} • {t.category}</div>
                   <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#F1F5F9', marginTop: '0.2rem' }}>{t.label}</div>
                 </div>
               ))}
@@ -110,13 +157,13 @@ export default function CausalAnalysis() {
           {/* Prevention Barriers */}
           <div className="glass-card" style={{ padding: '1rem', borderLeft: '3px solid #38BDF8' }}>
             <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-              2. Prevention Barriers
+              2. Prevention Controls
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {bowtie.prevention_barriers.map((b) => (
                 <div key={b.id} style={{ background: '#0B132B', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.7rem', color: '#38BDF8', fontWeight: '800' }}>{b.type}</span>
+                    <span style={{ fontSize: '0.68rem', color: '#38BDF8', fontWeight: '800' }}>{b.type}</span>
                     <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: '3px', background: b.status === 'Intact' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: b.status === 'Intact' ? '#10B981' : '#F59E0B', fontWeight: '700' }}>
                       {b.status}
                     </span>
@@ -146,13 +193,13 @@ export default function CausalAnalysis() {
           {/* Mitigation Barriers */}
           <div className="glass-card" style={{ padding: '1rem', borderLeft: '3px solid #10B981' }}>
             <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#10B981', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-              4. Mitigation Barriers
+              4. Mitigation Controls
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {bowtie.mitigation_barriers.map((b) => (
                 <div key={b.id} style={{ background: '#0B132B', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: '800' }}>{b.type}</span>
+                    <span style={{ fontSize: '0.68rem', color: '#10B981', fontWeight: '800' }}>{b.type}</span>
                     <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: '3px', background: b.status === 'Intact' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)', color: b.status === 'Intact' ? '#10B981' : '#EF4444', fontWeight: '700' }}>
                       {b.status}
                     </span>
@@ -171,7 +218,7 @@ export default function CausalAnalysis() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {bowtie.consequences.map((c) => (
                 <div key={c.id} style={{ background: '#0B132B', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(249, 115, 22, 0.2)' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#F97316', fontWeight: '800' }}>{c.id} • {c.category}</div>
+                  <div style={{ fontSize: '0.68rem', color: '#F97316', fontWeight: '800' }}>POTENTIAL CONSEQUENCE ({c.id})</div>
                   <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#F1F5F9', marginTop: '0.2rem' }}>{c.label}</div>
                 </div>
               ))}
