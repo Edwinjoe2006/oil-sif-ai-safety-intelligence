@@ -13,7 +13,12 @@ import {
   ChevronRight,
   Database,
   Radio,
-  X
+  Camera,
+  Sliders,
+  GitCommit,
+  Award,
+  Bell,
+  CheckSquare
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -21,24 +26,45 @@ export default function Sidebar({
   setActivePage,
   collapsed,
   setCollapsed,
-  health,
-  mobileOpen,
-  setMobileOpen
+  health
 }) {
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'analyze', label: 'Analyze Report', icon: FileSearch, highlight: true },
-    { id: 'reports', label: 'Safety Reports', icon: Layers },
-    { id: 'priority', label: 'Risk Priority Queue', icon: ListOrdered },
-    { id: 'emerging', label: 'Emerging Risks', icon: TrendingUp },
-    { id: 'hazards', label: 'Hazard Intelligence', icon: Activity },
-    { id: 'performance', label: 'Model Performance', icon: Cpu },
-    { id: 'settings', label: 'Settings', icon: SettingsIcon },
+  const sections = [
+    {
+      title: 'CORE OPERATIONS',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'analyze', label: 'Analyze Report', icon: FileSearch },
+        { id: 'priority', label: 'Risk Priority Queue', icon: ListOrdered },
+        { id: 'reports', label: 'Safety Reports', icon: Layers },
+      ]
+    },
+    {
+      title: 'RISK INTELLIGENCE',
+      items: [
+        { id: 'emerging', label: 'SIF Early Warning', icon: TrendingUp },
+        { id: 'assets', label: 'Asset Intelligence', icon: Layers },
+        { id: 'simulator', label: 'What-If Simulator', icon: Sliders },
+        { id: 'forecast', label: 'Predictive Forecasting', icon: Activity },
+        { id: 'vision', label: 'Vision AI Inspection', icon: Camera },
+        { id: 'causal', label: 'Causal Bow-Tie', icon: GitCommit },
+        { id: 'hazards', label: 'Hazard Domains', icon: Activity },
+      ]
+    },
+    {
+      title: 'GOVERNANCE & QUALITY',
+      items: [
+        { id: 'alerts', label: 'Safety Alert Center', icon: Bell },
+        { id: 'actions', label: 'Corrective Actions (CAPA)', icon: CheckSquare },
+        { id: 'quality', label: 'AI Quality & Validation', icon: Award },
+        { id: 'audit', label: 'AI Decision Audit Trace', icon: Cpu },
+        { id: 'performance', label: 'Model Performance', icon: Cpu },
+        { id: 'settings', label: 'System Settings', icon: SettingsIcon },
+      ]
+    }
   ];
 
   return (
     <aside
-      className={`sidebar-container ${mobileOpen ? 'mobile-open' : ''}`}
       style={{
         width: collapsed ? '80px' : '260px',
         backgroundColor: '#091124',
@@ -49,24 +75,30 @@ export default function Sidebar({
         transition: 'width 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         zIndex: 10,
         flexShrink: 0,
+        height: '100vh',
+        overflowY: 'auto'
       }}
     >
       {/* Top Header */}
       <div>
         <div
           style={{
-            padding: '1.5rem 1.25rem',
+            padding: '1.25rem 1.25rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: collapsed ? 'center' : 'space-between',
             borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+            position: 'sticky',
+            top: 0,
+            background: '#091124',
+            zIndex: 2
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div
               style={{
-                width: '38px',
-                height: '38px',
+                width: '36px',
+                height: '36px',
                 borderRadius: '10px',
                 background: 'linear-gradient(135deg, #0284C7 0%, #2563EB 100%)',
                 display: 'flex',
@@ -74,110 +106,108 @@ export default function Sidebar({
                 justifyContent: 'center',
                 boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)',
                 color: 'white',
+                flexShrink: 0
               }}
             >
-              <Shield size={22} />
+              <Shield size={20} />
             </div>
             {!collapsed && (
               <div>
-                <div style={{ fontSize: '1rem', fontWeight: '800', letterSpacing: '-0.02em', color: '#F8FAFC' }}>
+                <div style={{ fontSize: '0.95rem', fontWeight: '800', letterSpacing: '-0.02em', color: '#F8FAFC' }}>
                   OIL SIF AI
                 </div>
-                <div style={{ fontSize: '0.7rem', color: '#38BDF8', fontWeight: '600', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '0.65rem', color: '#38BDF8', fontWeight: '700', letterSpacing: '0.04em' }}>
                   SAFETY INTELLIGENCE
                 </div>
               </div>
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <button
-              type="button"
-              className="mobile-close-btn"
-              onClick={() => setMobileOpen && setMobileOpen(false)}
-              aria-label="Close menu"
-            >
-              <X size={20} />
-            </button>
-            <button
-              type="button"
-              className="desktop-collapse-btn"
-              onClick={() => setCollapsed(!collapsed)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#64748B',
-                cursor: 'pointer',
-                display: collapsed ? 'none' : 'flex',
-              }}
-            >
-              <ChevronLeft size={18} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setCollapsed(!collapsed)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#64748B',
+              cursor: 'pointer',
+              display: collapsed ? 'none' : 'flex',
+            }}
+          >
+            <ChevronLeft size={18} />
+          </button>
         </div>
 
-        {/* Navigation Links */}
-        <nav style={{ padding: '1rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activePage === item.id;
+        {/* Navigation Groups */}
+        <nav style={{ padding: '0.75rem 0.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {sections.map((sec, secIdx) => (
+            <div key={secIdx}>
+              {!collapsed && (
+                <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#475569', letterSpacing: '0.08em', padding: '0 0.75rem 0.35rem', textTransform: 'uppercase' }}>
+                  {sec.title}
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                {sec.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activePage === item.id;
 
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setActivePage(item.id);
-                  if (setMobileOpen) setMobileOpen(false);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.85rem',
-                  width: '100%',
-                  padding: collapsed ? '0.75rem' : '0.75rem 1rem',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: isActive
-                    ? 'linear-gradient(90deg, rgba(2, 132, 199, 0.25) 0%, rgba(2, 132, 199, 0.08) 100%)'
-                    : 'transparent',
-                  color: isActive ? '#38BDF8' : '#94A3B8',
-                  fontWeight: isActive ? '700' : '500',
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  borderLeft: isActive ? '3px solid #38BDF8' : '3px solid transparent',
-                }}
-                title={collapsed ? item.label : undefined}
-              >
-                <Icon size={19} style={{ flexShrink: 0 }} />
-                {!collapsed && <span>{item.label}</span>}
-              </button>
-            );
-          })}
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActivePage(item.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        width: '100%',
+                        padding: collapsed ? '0.65rem' : '0.6rem 0.85rem',
+                        justifyContent: collapsed ? 'center' : 'flex-start',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: isActive
+                          ? 'linear-gradient(90deg, rgba(2, 132, 199, 0.25) 0%, rgba(2, 132, 199, 0.08) 100%)'
+                          : 'transparent',
+                        color: isActive ? '#38BDF8' : '#94A3B8',
+                        fontWeight: isActive ? '700' : '500',
+                        fontSize: '0.825rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        borderLeft: isActive ? '3px solid #38BDF8' : '3px solid transparent',
+                      }}
+                      title={collapsed ? item.label : undefined}
+                    >
+                      <Icon size={17} style={{ flexShrink: 0 }} />
+                      {!collapsed && <span>{item.label}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
       </div>
 
       {/* Bottom System Status */}
       {!collapsed && (
-        <div style={{ padding: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <div style={{ background: '#050A17', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ padding: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+          <div style={{ background: '#050A17', borderRadius: '8px', padding: '0.65rem 0.85rem', fontSize: '0.7rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748B', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Radio size={12} /> AI Engine
+              <span style={{ color: '#64748B', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Radio size={11} /> AI Engine
               </span>
               <span style={{ color: health?.models_loaded ? '#10B981' : '#F59E0B', fontWeight: '700' }}>
-                ● {health?.models_loaded ? 'Ready' : 'Standby'}
+                ? {health?.models_loaded ? 'Ready' : 'Standby'}
               </span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748B', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Database size={12} /> Database
+              <span style={{ color: '#64748B', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Database size={11} /> Database
               </span>
               <span style={{ color: health?.database_connected ? '#10B981' : '#EF4444', fontWeight: '700' }}>
-                ● {health?.database_connected ? 'Connected' : 'Offline'}
+                ? {health?.database_connected ? 'Connected' : 'Offline'}
               </span>
             </div>
           </div>

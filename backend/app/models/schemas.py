@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 
+# --- Base / Analyze Schemas ---
+
 class AnalyzeRequest(BaseModel):
     report_text: str = Field(
         ..., 
@@ -18,6 +20,15 @@ class AnalyzeRequest(BaseModel):
         default="Operational Site", 
         max_length=150,
         description="Field location or facility"
+    )
+    asset: Optional[str] = Field(
+        default=None,
+        max_length=150,
+        description="Associated equipment or asset tag (e.g. Flare Header 04, Mud Pump #2)"
+    )
+    image_url: Optional[str] = Field(
+        default=None,
+        description="Optional image attachment URL or identifier"
     )
 
     @field_validator("report_text")
@@ -50,6 +61,24 @@ class CopilotExplanation(BaseModel):
     main_risk_factors: List[str]
     recommended_immediate_actions: List[str]
     priority: str
+    regulatory_reference: Optional[str] = None
+    sop_reference: Optional[str] = None
+
+
+class BowTieNode(BaseModel):
+    id: str
+    label: str
+    type: str  # threat, barrier_prevent, top_event, barrier_mitigate, consequence
+    health: Optional[str] = "Intact"  # Intact, Degraded, Failed
+    details: Optional[str] = None
+
+
+class BowTieDiagram(BaseModel):
+    threats: List[Dict[str, Any]]
+    prevention_barriers: List[Dict[str, Any]]
+    top_event: str
+    mitigation_barriers: List[Dict[str, Any]]
+    consequences: List[Dict[str, Any]]
 
 
 class AnalyzeResponse(BaseModel):
@@ -68,6 +97,8 @@ class AnalyzeResponse(BaseModel):
     escalation_path: List[Dict[str, Any]]
     similar_reports: List[SimilarReportItem] = []
     copilot: Optional[CopilotExplanation] = None
+    bow_tie: Optional[BowTieDiagram] = None
+    asset: Optional[str] = None
     created_at: Optional[datetime] = None
 
 
@@ -76,6 +107,8 @@ class ReportOut(BaseModel):
     report_text: str
     report_type: str
     location: str
+    asset: Optional[str] = None
+    image_url: Optional[str] = None
     sif_prediction: bool
     sif_probability: float
     hazard_category: str
@@ -88,6 +121,8 @@ class ReportOut(BaseModel):
     potential_consequences: List[str] = []
     recommended_action: List[str] = []
     escalation_path: List[Dict[str, Any]] = []
+    bow_tie: Optional[Dict[str, Any]] = None
+    copilot: Optional[Dict[str, Any]] = None
     created_at: datetime
     status: str
 
@@ -102,11 +137,300 @@ class ReportListResponse(BaseModel):
     reports: List[ReportOut]
 
 
+# --- Feature 1: Emerging Risks & Early Warning ---
+
+class EmergingRiskCluster(BaseModel):
+    hazard: str
+    location: str
+    precursor_count: int
+    velocity_percent: float
+    early_warning_level: str  # ELEVATED, HIGH, CRITICAL
+    key_drivers: List[str]
+    recommended_preemption: str
+
+
+class EarlyWarningResponse(BaseModel):
+    system_warning_level: str  # GREEN, YELLOW, ORANGE, RED
+    composite_early_warning_score: int
+    risk_velocity_7d: float
+    risk_acceleration: str
+    emerging_clusters: List[EmergingRiskCluster]
+    top_precursor_signals: List[Dict[str, Any]]
+    timestamp: datetime
+
+
+# --- Feature 2: Asset Risk Intelligence ---
+
+class AssetOut(BaseModel):
+    id: int
+    name: str
+    asset_type: str
+    location: str
+    criticality: str
+    risk_score: int
+    degradation_level: str
+    failure_probability: float
+    precursor_count: int
+    last_inspection_date: Optional[datetime] = None
+    maintenance_status: str
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AssetRiskProfile(BaseModel):
+    asset: AssetOut
+    recent_precursors: List[ReportOut] = []
+    vulnerability_factors: List[str]
+    maintenance_recommendations: List[str]
+    uptime_safety_index: float
+
+
+# --- Feature 3: Vision AI / Image Inspection ---
+
+class DetectedVisualHazard(BaseModel):
+    hazard_label: str
+    confidence: float
+    severity_level: str
+    bounding_box: Optional[Dict[str, float]] = None
+    description: str
+
+
+class VisionInspectionRequest(BaseModel):
+    image_base64: Optional[str] = None
+    image_url: Optional[str] = None
+    location: Optional[str] = "Offshore Facility"
+    asset: Optional[str] = None
+    context_notes: Optional[str] = None
+
+
+class VisionInspectionResponse(BaseModel):
+    inspection_id: str
+    detected_hazards: List[DetectedVisualHazard]
+    sif_risk_rating: str  # CRITICAL, HIGH, MEDIUM, LOW
+    sif_probability: float
+    overall_confidence: float
+    barrier_integrity_status: str
+    recommended_safety_action: List[str]
+    inspected_at: datetime
+
+
+# --- Feature 4: What-If Risk Simulator ---
+
+class SimulatorInput(BaseModel):
+    base_report_text: Optional[str] = None
+    hazard_category: Optional[str] = "Hydrocarbon Release / Flammable Vapor"
+    pressure_psi: Optional[float] = 120.0
+    wind_speed_knots: Optional[float] = 18.0
+    shift_type: Optional[str] = "Night Shift"  # Day Shift, Night Shift, Turnaround
+    crew_fatigue_level: Optional[str] = "Moderate"  # Low, Moderate, High, Severe
+    safety_barrier_status: Optional[str] = "Partially Degraded"  # Active & Intact, Partially Degraded, Bypassed
+    equipment_wear_pct: Optional[float] = 45.0
+    worker_experience_years: Optional[float] = 3.5
+
+
+class BarrierImpact(BaseModel):
+    barrier_name: str
+    status: str
+    risk_multiplier: float
+    risk_delta_pct: float
+
+
+class SimulatorResponse(BaseModel):
+    baseline_sif_probability: float
+    simulated_sif_probability: float
+    probability_delta: float
+    baseline_risk_score: int
+    simulated_risk_score: int
+    risk_level: str
+    critical_vulnerabilities: List[str]
+    barrier_breakdown: List[BarrierImpact]
+    mitigation_levers: List[str]
+
+
+# --- Feature 5: Bow-Tie Causal Analysis ---
+
+class BowTieRequest(BaseModel):
+    hazard_category: Optional[str] = None
+    report_text: Optional[str] = None
+
+
+class BowTieResponse(BaseModel):
+    top_event: str
+    hazard_category: str
+    threats: List[Dict[str, Any]]
+    prevention_barriers: List[Dict[str, Any]]
+    mitigation_barriers: List[Dict[str, Any]]
+    consequences: List[Dict[str, Any]]
+    barrier_health_summary: Dict[str, int]
+
+
+# --- Feature 6: Advanced AI Safety Copilot ---
+
+class CopilotQuery(BaseModel):
+    query: str
+    context_report_id: Optional[int] = None
+    context_hazard: Optional[str] = None
+    context_location: Optional[str] = None
+
+
+class CopilotAnswer(BaseModel):
+    answer: str
+    cited_standards: List[str]  # e.g., OSHA 1910.119, API RP 75, IOGP 459
+    sop_checklists: List[str]
+    immediate_mitigations: List[str]
+    sif_warning: Optional[str] = None
+    related_queries: List[str]
+
+
+# --- Feature 7: Human-in-the-Loop Validation 2.0 & AI Quality ---
+
+class ReviewSubmit(BaseModel):
+    report_id: int
+    reviewer_name: str = Field(..., min_length=2, max_length=100)
+    actual_sif: bool
+    actual_hazard: Optional[str] = None
+    actual_severity: Optional[str] = None
+    reviewer_reason: str = Field(..., min_length=3, max_length=255)
+    comment: Optional[str] = None
+
+
+class AIQualityMetrics(BaseModel):
+    total_validated_reports: int
+    agreement_rate_pct: float
+    human_override_rate_pct: float
+    sif_precision_pct: float
+    sif_recall_pct: float
+    model_drift_index: float
+    confusion_matrix: Dict[str, Dict[str, int]]
+    monthly_accuracy_trend: List[Dict[str, Any]]
+    top_override_reasons: List[Dict[str, Any]]
+
+
+# --- Feature 8: AI Decision Audit Trail & Trace ---
+
+class DecisionTreeNode(BaseModel):
+    id: str
+    condition: str
+    threshold: Optional[str] = None
+    passed: bool
+    sub_nodes: List[Dict[str, Any]] = []
+
+
+class DecisionAuditOut(BaseModel):
+    id: int
+    report_id: Optional[int] = None
+    model_version: str
+    sif_precursor_decision: bool
+    sif_confidence: float
+    feature_importance: Dict[str, float]
+    shap_values: Dict[str, float]
+    decision_tree_path: List[Dict[str, Any]]
+    rule_triggers: List[str]
+    inference_latency_ms: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# --- Feature 9: Safety Alerts & Corrective Actions ---
+
+class SafetyAlertOut(BaseModel):
+    id: int
+    report_id: Optional[int] = None
+    alert_title: str
+    severity_level: str
+    hazard_category: Optional[str] = None
+    location: Optional[str] = None
+    description: str
+    is_acknowledged: bool
+    acknowledged_by: Optional[str] = None
+    acknowledged_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AlertAckRequest(BaseModel):
+    acknowledged_by: str = Field(..., min_length=2, max_length=100)
+
+
+class CorrectiveActionCreate(BaseModel):
+    report_id: int
+    action_text: str = Field(..., min_length=5)
+    priority: str = "HIGH"  # CRITICAL, HIGH, MEDIUM, LOW
+    responsible_person: Optional[str] = None
+    department: str = "HSE"
+    due_date: Optional[datetime] = None
+
+
+class CorrectiveActionOut(BaseModel):
+    id: int
+    report_id: int
+    action_text: str
+    priority: str
+    responsible_person: Optional[str] = None
+    department: str
+    due_date: Optional[datetime] = None
+    status: str
+    is_completed: bool
+    assigned_to: Optional[str] = None
+    evidence: Optional[str] = None
+    verification_notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CorrectiveActionTransition(BaseModel):
+    new_status: str  # OPEN, ASSIGNED, IN PROGRESS, VERIFICATION, CLOSED
+    assigned_to: Optional[str] = None
+    responsible_person: Optional[str] = None
+    evidence: Optional[str] = None
+    verification_notes: Optional[str] = None
+
+
+# --- Feature 10: Predictive Safety Trend Forecasting ---
+
+class ForecastPoint(BaseModel):
+    date: str
+    predicted_precursors: float
+    lower_bound_95: float
+    upper_bound_95: float
+    high_risk_flag: bool
+
+
+class HazardForecast(BaseModel):
+    hazard: str
+    trend_direction: str
+    expected_incidents_next_30d: int
+    peak_risk_period: str
+
+
+class PredictiveForecastResponse(BaseModel):
+    horizon_days: int
+    forecast_points: List[ForecastPoint]
+    hazard_forecasts: List[HazardForecast]
+    high_risk_days_identified: int
+    primary_contributing_factors: List[str]
+    preemptive_recommendations: List[str]
+
+
+# --- Feedback, Statistics, Trends & Health ---
+
 class FeedbackCreate(BaseModel):
     report_id: int
     is_correct: bool
     actual_hazard: Optional[str] = None
     actual_severity: Optional[str] = None
+    actual_sif: Optional[bool] = None
+    reviewer_name: Optional[str] = None
+    reviewer_reason: Optional[str] = None
     comment: Optional[str] = Field(default=None, max_length=1000)
 
 
@@ -116,16 +440,14 @@ class FeedbackOut(BaseModel):
     is_correct: bool
     actual_hazard: Optional[str] = None
     actual_severity: Optional[str] = None
+    actual_sif: Optional[bool] = None
+    reviewer_name: Optional[str] = None
+    reviewer_reason: Optional[str] = None
     comment: Optional[str] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
-
-
-class CorrectiveActionUpdate(BaseModel):
-    is_completed: bool
-    assigned_to: Optional[str] = None
 
 
 class StatisticsOut(BaseModel):
@@ -135,6 +457,8 @@ class StatisticsOut(BaseModel):
     average_risk_score: float
     open_corrective_actions: int
     emerging_risks_count: int
+    active_alerts_count: int = 0
+    total_assets_tracked: int = 0
     risk_distribution: Dict[str, int]
     hazard_distribution: Dict[str, int]
     severity_distribution: Dict[str, int]
@@ -143,7 +467,7 @@ class StatisticsOut(BaseModel):
 
 class EmergingRiskItem(BaseModel):
     hazard: str
-    trend_direction: str  # "increasing", "decreasing", "stable"
+    trend_direction: str
     percent_change: float
     report_count: int
 
@@ -175,3 +499,4 @@ class HealthOut(BaseModel):
     models_loaded: bool
     dataset_present: bool
     timestamp: datetime
+

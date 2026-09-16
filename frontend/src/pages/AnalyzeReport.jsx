@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ShieldAlert,
   Sparkles,
@@ -11,11 +11,8 @@ import {
   MapPin,
   Bot,
   Zap,
-  Mic,
-  MicOff,
-  Sliders,
-  ShieldCheck,
-  CheckSquare
+  GitCommit,
+  Camera
 } from 'lucide-react';
 import { api } from '../services/api';
 import RiskScoreGauge from '../components/RiskScoreGauge';
@@ -32,6 +29,7 @@ const DEMO_SCENARIOS = [
     title: 'High-Pressure Oil Leak',
     type: 'Unsafe Condition',
     location: 'Offshore Platform Delta - Wellhead Manifold',
+    asset: 'Flare Header 04',
     text: 'High-pressure crude oil injection line developed a severe flange gasket leak at 1200 PSI while maintenance technicians were working without proper protection in the immediate spray zone.',
     tag: 'Critical SIF',
     color: '#EF4444',
@@ -41,6 +39,7 @@ const DEMO_SCENARIOS = [
     title: 'Confined-Space Entry Hazard',
     type: 'Unsafe Act',
     location: 'Refinery Crude Distillation Unit Tank #4',
+    asset: 'High Pressure Separator A',
     text: 'Worker entered a confined space without atmospheric gas testing and without confirming required entry controls.',
     tag: 'Fatal Risk',
     color: '#EF4444',
@@ -50,6 +49,7 @@ const DEMO_SCENARIOS = [
     title: 'Hot Work Near Flammables',
     type: 'Unsafe Act',
     location: 'Compressor Station 3 - Gas Processing Area',
+    asset: 'Gas Compressor 01',
     text: 'Workers performed hot work near flammable material without adequate gas monitoring and fire protection controls.',
     tag: 'Fire/Explosion',
     color: '#F97316',
@@ -59,6 +59,7 @@ const DEMO_SCENARIOS = [
     title: 'Working-at-Height Hazard',
     type: 'Unsafe Act',
     location: 'Drilling Rig Substructure 2',
+    asset: 'Offshore Crane 1',
     text: 'Worker was performing maintenance at height without proper fall protection.',
     tag: 'Fall Risk',
     color: '#F59E0B',
@@ -68,193 +69,42 @@ const DEMO_SCENARIOS = [
     title: 'Minor Housekeeping / Tripping',
     type: 'Unsafe Condition',
     location: 'Central Field Workshop Area',
+    asset: 'Mud Pump #2',
     text: 'Loose materials were left across a workshop walkway creating a tripping hazard.',
     tag: 'Low Risk',
     color: '#10B981',
   },
 ];
 
+const ASSET_OPTIONS = [
+  { label: 'None / General Facility Zone', value: '' },
+  { label: 'Flare Header 04 (Flare & Relief)', value: 'Flare Header 04' },
+  { label: 'Mud Pump #2 (High Pressure Drilling)', value: 'Mud Pump #2' },
+  { label: 'High Pressure Separator A (Pressure Vessel)', value: 'High Pressure Separator A' },
+  { label: 'Offshore Crane 1 (Lifting Equipment)', value: 'Offshore Crane 1' },
+  { label: 'Wellhead B-12 (Subsea / Surface Wellhead)', value: 'Wellhead B-12' },
+  { label: 'Gas Compressor 01 (Rotating Equipment)', value: 'Gas Compressor 01' },
+];
+
 export default function AnalyzeReport({ onNavigateToReport }) {
-  const [reportText, setReportText] = useState(() => {
-    try {
-      return localStorage.getItem('oil_sif_draft_text') || '';
-    } catch {
-      return '';
-    }
-  });
-
-  const [reportType, setReportType] = useState(() => {
-    try {
-      return localStorage.getItem('oil_sif_draft_type') || 'Unsafe Condition';
-    } catch {
-      return 'Unsafe Condition';
-    }
-  });
-
-  const [location, setLocation] = useState(() => {
-    try {
-      return localStorage.getItem('oil_sif_draft_location') || 'Offshore Rig 4 - Deck Area';
-    } catch {
-      return 'Offshore Rig 4 - Deck Area';
-    }
-  });
-
+  const [reportText, setReportText] = useState('');
+  const [reportType, setReportType] = useState('Unsafe Condition');
+  const [location, setLocation] = useState('Offshore Rig 4 - Deck Area');
+  const [asset, setAsset] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
-  const [result, setResult] = useState(() => {
-    try {
-      const saved = localStorage.getItem('oil_sif_last_analysis_result');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
+  const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [completedActions, setCompletedActions] = useState(() => {
-    try {
-      const saved = localStorage.getItem('oil_sif_completed_actions');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  const [isListening, setIsListening] = useState(false);
-  const [speechSupported, setSpeechSupported] = useState(true);
-
-  // What-If Barrier Simulation State
-  const [mitigations, setMitigations] = useState(() => {
-    try {
-      const saved = localStorage.getItem('oil_sif_mitigations');
-      return saved ? JSON.parse(saved) : {
-        ptw: false,
-        ppe: false,
-        loto: false,
-        gasTesting: false,
-        fallProtection: false,
-      };
-    } catch {
-      return {
-        ptw: false,
-        ppe: false,
-        loto: false,
-        gasTesting: false,
-        fallProtection: false,
-      };
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('oil_sif_draft_text', reportText);
-    } catch {}
-  }, [reportText]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('oil_sif_draft_type', reportType);
-    } catch {}
-  }, [reportType]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('oil_sif_draft_location', location);
-    } catch {}
-  }, [location]);
-
-  useEffect(() => {
-    try {
-      if (result) {
-        localStorage.setItem('oil_sif_last_analysis_result', JSON.stringify(result));
-      } else {
-        localStorage.removeItem('oil_sif_last_analysis_result');
-      }
-    } catch {}
-  }, [result]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('oil_sif_completed_actions', JSON.stringify(completedActions));
-    } catch {}
-  }, [completedActions]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('oil_sif_mitigations', JSON.stringify(mitigations));
-    } catch {}
-  }, [mitigations]);
-
-  const handleClearAnalysis = () => {
-    setResult(null);
-    setReportText('');
-    setCompletedActions({});
-    setMitigations({ ptw: false, ppe: false, loto: false, gasTesting: false, fallProtection: false });
-    try {
-      localStorage.removeItem('oil_sif_last_analysis_result');
-      localStorage.removeItem('oil_sif_draft_text');
-      localStorage.removeItem('oil_sif_completed_actions');
-      localStorage.removeItem('oil_sif_mitigations');
-    } catch {}
-  };
-
-  const toggleVoiceDictation = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setSpeechSupported(false);
-      alert('Voice dictation is not supported in this browser. Please use Chrome, Safari, or Edge.');
-      return;
-    }
-
-    if (isListening) {
-      window._activeRecognition?.stop();
-      setIsListening(false);
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        setReportText((prev) => (prev ? `${prev} ${transcript.trim()}` : transcript.trim()));
-      };
-
-      recognition.onerror = () => {
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      window._activeRecognition = recognition;
-      recognition.start();
-    } catch {
-      setIsListening(false);
-    }
-  };
+  const [completedActions, setCompletedActions] = useState({});
 
   const handleUseScenario = (sc) => {
     setReportText(sc.text);
     setReportType(sc.type);
     setLocation(sc.location);
+    setAsset(sc.asset || '');
     setResult(null);
     setError(null);
-    setMitigations({ ptw: false, ppe: false, loto: false, gasTesting: false, fallProtection: false });
-    try {
-      localStorage.removeItem('oil_sif_last_analysis_result');
-    } catch {}
   };
 
   const handleAnalyze = async (e) => {
@@ -266,16 +116,17 @@ export default function AnalyzeReport({ onNavigateToReport }) {
       setError(null);
       setResult(null);
 
-      // Multi-step loading visualization
-      setAnalysisStep(1); // NLP Parsing
-      const stepTimer1 = setTimeout(() => setAnalysisStep(2), 250); // Hazard Detection
-      const stepTimer2 = setTimeout(() => setAnalysisStep(3), 500); // SIF Assessment
-      const stepTimer3 = setTimeout(() => setAnalysisStep(4), 750); // Risk Scoring
+      setAnalysisStep(1);
+      const stepTimer1 = setTimeout(() => setAnalysisStep(2), 250);
+      const stepTimer2 = setTimeout(() => setAnalysisStep(3), 500);
+      const stepTimer3 = setTimeout(() => setAnalysisStep(4), 750);
 
       const response = await api.analyzeReport({
         report_text: reportText,
         report_type: reportType,
         location: location,
+        asset: asset || undefined,
+        image_url: imageUrl || undefined,
       });
 
       clearTimeout(stepTimer1);
@@ -311,7 +162,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
           Analyze Safety Report
         </h2>
         <p style={{ fontSize: '0.9rem', color: '#94A3B8', marginTop: '0.25rem' }}>
-          Identify Serious Injury & Fatality (SIF) precursors, hazard domains, and potential risk pathways using AI.
+          Identify Serious Injury & Fatality (SIF) precursors, hazard domains, barrier health, and causal bow-tie pathways using AI.
         </p>
       </div>
 
@@ -359,7 +210,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
       {/* Input Panel */}
       <div className="glass-card" style={{ padding: '2rem', marginBottom: '2.5rem' }}>
         <form onSubmit={handleAnalyze} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94A3B8', marginBottom: '0.4rem' }}>
                 Report Classification Type
@@ -388,47 +239,28 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                 required
               />
             </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38BDF8', marginBottom: '0.4rem' }}>
+                Target Asset / Equipment (Feature 2)
+              </label>
+              <select
+                className="form-select"
+                value={asset}
+                onChange={(e) => setAsset(e.target.value)}
+              >
+                {ASSET_OPTIONS.map((opt, i) => (
+                  <option key={i} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94A3B8' }}>
-                  Safety Observation / Incident Narrative
-                </label>
-                {/* Voice Dictation Button */}
-                <button
-                  type="button"
-                  onClick={toggleVoiceDictation}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.2rem 0.55rem',
-                    borderRadius: '6px',
-                    fontSize: '0.7rem',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    background: isListening ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.1)',
-                    border: `1px solid ${isListening ? '#EF4444' : 'rgba(56, 189, 248, 0.3)'}`,
-                    color: isListening ? '#EF4444' : '#38BDF8',
-                    transition: 'all 0.2s ease',
-                  }}
-                  title="Speak safety observation using field speech-to-text dictation"
-                >
-                  {isListening ? (
-                    <>
-                      <MicOff size={12} className="animate-pulse" />
-                      <span>Listening...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mic size={12} />
-                      <span>Voice Input</span>
-                    </>
-                  )}
-                </button>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94A3B8' }}>
+                Safety Observation / Incident Narrative
+              </label>
               <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
                 {reportText.length} characters
               </span>
@@ -444,17 +276,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {(reportText || result) && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleClearAnalysis}
-                disabled={loading}
-              >
-                Clear / New Observation
-              </button>
-            )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
               type="submit"
               className="btn btn-primary"
@@ -565,11 +387,11 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                   SIF PRECURSOR DETECTED
                 </span>
                 <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#FFFFFF', marginTop: '0.35rem' }}>
-                  {result.sif_precursor ? 'YES — SIF RISK' : 'NO SIF PRECURSOR'}
+                  {result.sif_precursor ? 'YES ? SIF RISK' : 'NO SIF PRECURSOR'}
                 </div>
               </div>
               <div style={{ marginTop: '1.25rem', fontSize: '0.85rem', color: '#CBD5E1' }}>
-                SIF Model Confidence: <strong style={{ color: '#F8FAFC' }}>{(Number(result.sif_probability ?? 0.85) * 100).toFixed(1)}%</strong>
+                SIF Model Confidence: <strong style={{ color: '#F8FAFC' }}>{(result.sif_probability * 100).toFixed(1)}%</strong>
               </div>
             </div>
 
@@ -583,7 +405,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                   {result.hazard_category}
                 </div>
                 <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                  Classification probability: {(Number(result.hazard_probability ?? 0.90) * 100).toFixed(1)}%
+                  Classification probability: {(result.hazard_probability * 100).toFixed(1)}%
                 </span>
               </div>
 
@@ -598,126 +420,42 @@ export default function AnalyzeReport({ onNavigateToReport }) {
             </div>
           </div>
 
-          {/* Interactive What-If Barrier Mitigation Simulator */}
-          <div
-            className="glass-card"
-            style={{
-              padding: '1.75rem 2rem',
-              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.15) 0%, rgba(11, 19, 43, 0.95) 100%)',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#38BDF8', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.3rem' }}>
-                  <Sliders size={15} /> Dynamic Field Barrier Simulator
-                </div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#FFFFFF' }}>
-                  "What-If" Precursor Control Simulation
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
-                  Toggle operational barriers to simulate real-time precursor mitigation and residual risk reduction.
-                </p>
-              </div>
-
-              {/* Live Mitigated Score Counter */}
-              {(() => {
-                let reduction = 0;
-                if (mitigations.ptw) reduction += 18;
-                if (mitigations.ppe) reduction += 14;
-                if (mitigations.loto) reduction += 22;
-                if (mitigations.gasTesting) reduction += 18;
-                if (mitigations.fallProtection) reduction += 20;
-
-                const baseScore = result.risk_score || 0;
-                const mitigated = Math.max(8, baseScore - reduction);
-                const percentReduced = baseScore > 0 ? Math.round(((baseScore - mitigated) / baseScore) * 100) : 0;
-                const isDefused = mitigated < 50;
-
-                return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', background: '#070D1E', padding: '0.75rem 1.25rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <div>
-                      <span style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>
-                        Simulated Risk
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
-                        <span style={{ fontSize: '1.75rem', fontWeight: '800', color: mitigated < 25 ? '#10B981' : mitigated < 50 ? '#F59E0B' : '#EF4444' }}>
-                          {mitigated}
-                        </span>
-                        <span style={{ fontSize: '0.8rem', color: '#64748B' }}>/100</span>
-                      </div>
-                    </div>
-
-                    <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '1rem' }}>
-                      <span style={{ fontSize: '0.7rem', color: '#38BDF8', fontWeight: '800', display: 'block' }}>
-                        -{percentReduced}% RISK
-                      </span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: isDefused ? '#10B981' : '#F59E0B' }}>
-                        {isDefused ? '● SIF Mitigated' : '▲ Residual SIF'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Barrier Checkboxes */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem', marginTop: '1.25rem' }}>
-              {[
-                { id: 'ptw', label: 'Permit-to-Work (PTW) Verified', delta: '-18 pts' },
-                { id: 'ppe', label: 'Task-Specific PPE Certified', delta: '-14 pts' },
-                { id: 'loto', label: 'Lockout/Tagout (LOTO) Isolated', delta: '-22 pts' },
-                { id: 'gasTesting', label: 'Continuous Gas Detection Active', delta: '-18 pts' },
-                { id: 'fallProtection', label: '100% Engineered Fall Arrest Rigged', delta: '-20 pts' },
-              ].map((barrier) => {
-                const active = !!mitigations[barrier.id];
-                return (
-                  <div
-                    key={barrier.id}
-                    onClick={() => setMitigations((prev) => ({ ...prev, [barrier.id]: !prev[barrier.id] }))}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.85rem 1rem',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      background: active ? 'rgba(16, 185, 129, 0.12)' : '#070D1E',
-                      border: active ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255,255,255,0.06)',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <div
-                        style={{
-                          width: '18px',
-                          height: '18px',
-                          borderRadius: '4px',
-                          border: active ? '1px solid #10B981' : '1px solid #64748B',
-                          background: active ? '#10B981' : 'transparent',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                        }}
-                      >
-                        {active && <CheckCircle2 size={13} />}
-                      </div>
-                      <span style={{ fontSize: '0.8rem', fontWeight: active ? '700' : '500', color: active ? '#FFFFFF' : '#94A3B8' }}>
-                        {barrier.label}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: active ? '#10B981' : '#64748B' }}>
-                      {barrier.delta}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* AI Safety Copilot */}
+          {/* AI Safety Copilot (Feature 6) */}
           {result.copilot && <CopilotCard copilot={result.copilot} />}
+
+          {/* Causal Bow-Tie Diagram Section (Feature 5) */}
+          {result.bow_tie && (
+            <div className="glass-card" style={{ padding: '1.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <GitCommit size={18} color="#38BDF8" />
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', margin: 0 }}>
+                  Incident Causal Bow-Tie Model
+                </h3>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '1rem', borderRadius: '8px', borderLeft: '3px solid #EF4444' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#EF4444', textTransform: 'uppercase' }}>Threats</div>
+                  <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.2rem', fontSize: '0.8rem', color: '#CBD5E1' }}>
+                    {result.bow_tie.threats?.slice(0, 3).map((t, i) => <li key={i}>{t.label || t}</li>)}
+                  </ul>
+                </div>
+
+                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '1rem', borderRadius: '8px', borderLeft: '3px solid #38BDF8' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase' }}>Prevention Barriers</div>
+                  <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.2rem', fontSize: '0.8rem', color: '#CBD5E1' }}>
+                    {result.bow_tie.prevention_barriers?.slice(0, 3).map((b, i) => <li key={i}>{b.label || b}</li>)}
+                  </ul>
+                </div>
+
+                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '1rem', borderRadius: '8px', borderLeft: '3px solid #10B981' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#10B981', textTransform: 'uppercase' }}>Mitigation Barriers</div>
+                  <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.2rem', fontSize: '0.8rem', color: '#CBD5E1' }}>
+                    {result.bow_tie.mitigation_barriers?.slice(0, 3).map((b, i) => <li key={i}>{b.label || b}</li>)}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Explainable Dangerous Factors */}
           <div className="glass-card" style={{ padding: '1.75rem' }}>
@@ -745,10 +483,8 @@ export default function AnalyzeReport({ onNavigateToReport }) {
 
           {/* Potential Incident Escalation Path & Potential Consequences */}
           <div className="grid-2">
-            {/* Escalation Path */}
             <EscalationPath pathway={result.escalation_path} />
 
-            {/* Potential Consequences */}
             <div className="glass-card" style={{ padding: '1.75rem' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.5rem' }}>
                 Potential Consequences
@@ -780,7 +516,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
             </div>
           </div>
 
-          {/* Recommended Corrective Actions (with checkable states) */}
+          {/* Recommended Corrective Actions */}
           <div className="glass-card" style={{ padding: '1.75rem' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.5rem' }}>
               Recommended Corrective Actions
@@ -867,7 +603,6 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                         {sim.similarity_percentage}% Match
                       </span>
                     </div>
-                    {/* Visual similarity bar */}
                     <div style={{ width: '100%', height: '4px', background: '#1E293B', borderRadius: '2px', marginBottom: '0.75rem', overflow: 'hidden' }}>
                       <div style={{ width: `${sim.similarity_percentage}%`, height: '100%', background: '#38BDF8' }} />
                     </div>

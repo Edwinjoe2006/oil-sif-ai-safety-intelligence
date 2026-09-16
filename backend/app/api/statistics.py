@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database.database import get_db
-from app.database.models import SafetyReport, CorrectiveAction
+from app.database.models import SafetyReport, CorrectiveAction, SafetyAlert, Asset
 from app.models.schemas import StatisticsOut
 from app.services.trend_service import trend_service
 
@@ -12,9 +12,10 @@ router = APIRouter(prefix="/statistics", tags=["Statistics"])
 def get_dashboard_statistics(db: Session = Depends(get_db)):
     """
     Computes live dashboard KPIs and distributions strictly from the database.
-    Does not fabricate or hard-code any values.
     """
     total = db.query(SafetyReport).count()
+    active_alerts = db.query(SafetyAlert).filter(SafetyAlert.is_acknowledged == False).count()
+    assets_count = db.query(Asset).count()
 
     if total == 0:
         return StatisticsOut(
@@ -24,6 +25,8 @@ def get_dashboard_statistics(db: Session = Depends(get_db)):
             average_risk_score=0.0,
             open_corrective_actions=0,
             emerging_risks_count=0,
+            active_alerts_count=active_alerts,
+            total_assets_tracked=assets_count,
             risk_distribution={"LOW": 0, "MEDIUM": 0, "HIGH": 0, "CRITICAL": 0},
             hazard_distribution={},
             severity_distribution={"Low": 0, "Medium": 0, "High": 0, "Critical": 0},
@@ -46,7 +49,7 @@ def get_dashboard_statistics(db: Session = Depends(get_db)):
     # 4. Open Corrective Actions
     open_actions = (
         db.query(CorrectiveAction)
-        .filter(CorrectiveAction.is_completed == False)
+        .filter(CorrectiveAction.status != "CLOSED")
         .count()
     )
 
@@ -98,6 +101,8 @@ def get_dashboard_statistics(db: Session = Depends(get_db)):
         average_risk_score=round(float(avg_score), 1),
         open_corrective_actions=open_actions,
         emerging_risks_count=increasing_count,
+        active_alerts_count=active_alerts,
+        total_assets_tracked=assets_count,
         risk_distribution=risk_dist,
         hazard_distribution=hazard_dist,
         severity_distribution=severity_dist,

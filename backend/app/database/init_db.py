@@ -1,131 +1,157 @@
-import csv
 import logging
-from datetime import datetime
-from pathlib import Path
-from app.database.database import engine, Base, SessionLocal
-from app.database.models import SafetyReport, Feedback, CorrectiveAction, AnalysisHistory
-from app.services.explanation_service import explanation_service
-from app.services.recommendation_service import recommendation_service
-from app.utils.config import settings
+from sqlalchemy import inspect, text
+from app.database.database import engine, Base
+from app.database.models import SafetyReport, Feedback, CorrectiveAction, SafetyAlert, AIDecisionAudit, Asset, AnalysisHistory
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("OIL-SIF-AI.init_db")
 
-def _seed_initial_data(db):
-    """Populates baseline industrial safety reports if database has no records."""
-    dataset_path = settings.DATASET_PATH
-    if not dataset_path.exists():
-        alt_paths = [
-            settings.PROJECT_ROOT / "data" / "OIL_SIF_Synthetic_Dataset_5000.csv",
-            Path(__file__).resolve().parent.parent.parent.parent / "data" / "OIL_SIF_Synthetic_Dataset_5000.csv",
-            Path("data/OIL_SIF_Synthetic_Dataset_5000.csv")
-        ]
-        for p in alt_paths:
-            if p.exists():
-                dataset_path = p
-                break
+def _migrate_tables(db_engine):
+    """Safely adds missing columns to existing tables without dropping data."""
+    try:
+        inspector = inspect(db_engine)
+        tables = inspector.get_table_names()
 
-    if dataset_path.exists():
-        logger.info(f"Seeding database from dataset: {dataset_path}")
+        # Migrate safety_reports
+        if "safety_reports" in tables:
+            existing_cols = {c["name"] for c in inspector.get_columns("safety_reports")}
+            with db_engine.begin() as conn:
+                if "asset" not in existing_cols:
+                    conn.execute(text("ALTER TABLE safety_reports ADD COLUMN asset VARCHAR(150)"))
+                if "image_url" not in existing_cols:
+                    conn.execute(text("ALTER TABLE safety_reports ADD COLUMN image_url VARCHAR(500)"))
+                if "bow_tie" not in existing_cols:
+                    conn.execute(text("ALTER TABLE safety_reports ADD COLUMN bow_tie JSON"))
+                if "copilot" not in existing_cols:
+                    conn.execute(text("ALTER TABLE safety_reports ADD COLUMN copilot JSON"))
+
+        # Migrate feedback
+        if "feedback" in tables:
+            existing_cols = {c["name"] for c in inspector.get_columns("feedback")}
+            with db_engine.begin() as conn:
+                if "actual_sif" not in existing_cols:
+                    conn.execute(text("ALTER TABLE feedback ADD COLUMN actual_sif BOOLEAN"))
+                if "reviewer_name" not in existing_cols:
+                    conn.execute(text("ALTER TABLE feedback ADD COLUMN reviewer_name VARCHAR(100)"))
+                if "reviewer_reason" not in existing_cols:
+                    conn.execute(text("ALTER TABLE feedback ADD COLUMN reviewer_reason VARCHAR(255)"))
+
+        # Migrate corrective_actions
+        if "corrective_actions" in tables:
+            existing_cols = {c["name"] for c in inspector.get_columns("corrective_actions")}
+            with db_engine.begin() as conn:
+                if "priority" not in existing_cols:
+                    conn.execute(text("ALTER TABLE corrective_actions ADD COLUMN priority VARCHAR(50) DEFAULT 'HIGH'"))
+                if "responsible_person" not in existing_cols:
+                    conn.execute(text("ALTER TABLE corrective_actions ADD COLUMN responsible_person VARCHAR(100)"))
+                if "department" not in existing_cols:
+                    conn.execute(text("ALTER TABLE corrective_actions ADD COLUMN department VARCHAR(100) DEFAULT 'HSE'"))
+                if "due_date" not in existing_cols:
+                    conn.execute(text("ALTER TABLE corrective_actions ADD COLUMN due_date DATETIME"))
+                if "status" not in existing_cols:
+                    conn.execute(text("ALTER TABLE corrective_actions ADD COLUMN status VARCHAR(50) DEFAULT 'OPEN'"))
+                if "evidence" not in existing_cols:
+                    conn.execute(text("ALTER TABLE corrective_actions ADD COLUMN evidence TEXT"))
+                if "verification_notes" not in existing_cols:
+                    conn.execute(text("ALTER TABLE corrective_actions ADD COLUMN verification_notes TEXT"))
+                if "created_at" not in existing_cols:
+                    conn.execute(text("ALTER TABLE corrective_actions ADD COLUMN created_at DATETIME"))
+
+    except Exception as e:
+        logger.warning(f"Migration check noticed: {e}")
+
+def _seed_default_assets(db_engine):
+    """Seeds baseline assets if none exist."""
+    from sqlalchemy.orm import Session
+    with Session(db_engine) as session:
         try:
-            with open(dataset_path, "r", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                count = 0
-                for row in reader:
-                    if count >= 60:
-                        break
-
-                    report_text = row.get("report_text", "").strip()
-                    if not report_text:
-                        continue
-
-                    hazard = row.get("hazard_category", "General Safety")
-                    sif_raw = str(row.get("sif_precursor", "No")).strip().lower()
-                    sif_val = sif_raw in ["yes", "true", "1"]
-                    severity = row.get("severity", "Medium")
-
-                    try:
-                        risk_score = int(float(row.get("risk_score", 45)))
-                    except (ValueError, TypeError):
-                        risk_score = 45
-
-                    if risk_score >= 75:
-                        risk_level = "CRITICAL"
-                    elif risk_score >= 50:
-                        risk_level = "HIGH"
-                    elif risk_score >= 25:
-                        risk_level = "MEDIUM"
-                    else:
-                        risk_level = "LOW"
-
-                    factors = explanation_service.detect_factors(report_text)
-                    consequences = explanation_service.get_consequences(hazard)
-                    actions = recommendation_service.get_recommendations(hazard)
-                    escalation = explanation_service.get_escalation_path(hazard)
-
-                    created_at_str = row.get("report_date")
-                    created_at = datetime.utcnow()
-                    if created_at_str:
-                        try:
-                            created_at = datetime.strptime(created_at_str.strip(), "%Y-%m-%d")
-                        except ValueError:
-                            pass
-
-                    report = SafetyReport(
-                        report_text=report_text,
-                        report_type=row.get("report_type", "Unsafe Condition"),
-                        location=row.get("location", "Operational Asset"),
-                        sif_prediction=sif_val,
-                        sif_probability=0.88 if sif_val else 0.12,
-                        hazard_category=hazard,
-                        hazard_probability=0.92,
-                        severity=severity,
-                        severity_probability=0.89,
-                        risk_score=risk_score,
-                        risk_level=risk_level,
-                        detected_factors=factors,
-                        potential_consequences=consequences,
-                        recommended_action=actions,
-                        escalation_path=escalation,
-                        status="Open" if count % 3 == 0 else ("In Progress" if count % 3 == 1 else "Resolved"),
-                        created_at=created_at
-                    )
-                    db.add(report)
-                    db.flush()
-
-                    for act_text in actions[:2]:
-                        action_row = CorrectiveAction(
-                            report_id=report.id,
-                            action_text=act_text,
-                            is_completed=(count % 3 == 2),
-                            assigned_to="Duty Safety Officer"
-                        )
-                        db.add(action_row)
-
-                    count += 1
-
-                db.commit()
-                logger.info(f"Successfully seeded {count} baseline safety reports into SQLite.")
+            count = session.query(Asset).count()
+            if count == 0:
+                logger.info("Seeding initial asset risk intelligence records...")
+                default_assets = [
+                    Asset(
+                        name="Flare Header 04",
+                        asset_type="Flare & Relief System",
+                        location="Offshore Platform Alpha - Deck 3",
+                        criticality="CRITICAL",
+                        risk_score=82,
+                        degradation_level="High",
+                        failure_probability=0.28,
+                        precursor_count=7,
+                        maintenance_status="Inspection Required"
+                    ),
+                    Asset(
+                        name="Mud Pump #2",
+                        asset_type="High Pressure Drilling Pump",
+                        location="Drilling Rig Beta - Mud Pit",
+                        criticality="HIGH",
+                        risk_score=71,
+                        degradation_level="Moderate",
+                        failure_probability=0.19,
+                        precursor_count=4,
+                        maintenance_status="Operational"
+                    ),
+                    Asset(
+                        name="High Pressure Separator A",
+                        asset_type="Pressure Vessel",
+                        location="Gas Processing Unit 1",
+                        criticality="CRITICAL",
+                        risk_score=78,
+                        degradation_level="High",
+                        failure_probability=0.24,
+                        precursor_count=5,
+                        maintenance_status="Maintenance Due"
+                    ),
+                    Asset(
+                        name="Offshore Crane 1",
+                        asset_type="Lifting Equipment",
+                        location="Main Deck - Starboard",
+                        criticality="HIGH",
+                        risk_score=64,
+                        degradation_level="Moderate",
+                        failure_probability=0.14,
+                        precursor_count=3,
+                        maintenance_status="Operational"
+                    ),
+                    Asset(
+                        name="Wellhead B-12",
+                        asset_type="Subsea / Surface Wellhead",
+                        location="Wellbay Area 2",
+                        criticality="CRITICAL",
+                        risk_score=85,
+                        degradation_level="Severe",
+                        failure_probability=0.32,
+                        precursor_count=8,
+                        maintenance_status="Maintenance Due"
+                    ),
+                    Asset(
+                        name="Gas Compressor 01",
+                        asset_type="Rotating Equipment",
+                        location="Compressor Hall 3",
+                        criticality="HIGH",
+                        risk_score=59,
+                        degradation_level="Moderate",
+                        failure_probability=0.12,
+                        precursor_count=2,
+                        maintenance_status="Operational"
+                    ),
+                ]
+                session.add_all(default_assets)
+                session.commit()
+                logger.info("Default assets seeded successfully.")
         except Exception as e:
-            db.rollback()
-            logger.error(f"Error seeding database from CSV: {e}")
+            logger.warning(f"Could not seed default assets: {e}")
 
 def init_db():
-    """Initializes all database tables safely and ensures baseline records exist."""
+    """Initializes all database tables safely without dropping existing tables."""
     try:
         Base.metadata.create_all(bind=engine)
-        logger.info("Database tables initialized successfully.")
-
-        db = SessionLocal()
-        try:
-            count = db.query(SafetyReport).count()
-            if count == 0:
-                logger.info("Database is empty. Populating baseline records...")
-                _seed_initial_data(db)
-        finally:
-            db.close()
+        _migrate_tables(engine)
+        _seed_default_assets(engine)
+        logger.info("Database tables initialized and migrated successfully.")
     except Exception as e:
         logger.error(f"Error initializing database tables: {e}")
         raise e
 
 if __name__ == "__main__":
     init_db()
+

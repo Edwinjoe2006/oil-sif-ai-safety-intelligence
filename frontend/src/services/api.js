@@ -374,7 +374,6 @@ export const api = {
       .slice(0, limit);
   },
 
-  // Model Evaluation Metrics
   getModelMetrics: async () => {
     try {
       const res = await fetch(`${API_BASE}/model-metrics`);
@@ -394,7 +393,6 @@ export const api = {
     }
   },
 
-  // Similar Reports
   getSimilarReports: async (query, limit = 3) => {
     try {
       const res = await fetch(`${API_BASE}/similar-reports?query=${encodeURIComponent(query)}&limit=${limit}`);
@@ -404,7 +402,6 @@ export const api = {
     }
   },
 
-  // Human Feedback
   submitFeedback: async (feedbackData) => {
     try {
       const res = await fetch(`${API_BASE}/feedback`, {
@@ -417,6 +414,150 @@ export const api = {
       console.warn('API submitFeedback offline save:', err.message);
       return { status: 'recorded_locally', ...feedbackData };
     }
+  },
+
+  // --- 10 Advanced Features ---
+
+  // Feature 1: Emerging Risks & SIF Early Warning
+  getEmergingRisks: async () => {
+    const res = await fetch(`${API_BASE}/emerging-risks`);
+    return handleResponse(res);
+  },
+
+  // Feature 2: Asset-Level Risk Intelligence
+  getAssets: async () => {
+    const res = await fetch(`${API_BASE}/assets`);
+    return handleResponse(res);
+  },
+
+  getAssetById: async (id) => {
+    const res = await fetch(`${API_BASE}/assets/${id}`);
+    return handleResponse(res);
+  },
+
+  getAssetRiskProfile: async (id) => {
+    const res = await fetch(`${API_BASE}/assets/${id}/risk-profile`);
+    return handleResponse(res);
+  },
+
+  // Feature 3: Vision AI / Image Inspection
+  inspectSafetyImage: async (payload) => {
+    const res = await fetch(`${API_BASE}/vision/inspect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse(res);
+  },
+
+  // Feature 4: What-If Risk Simulator
+  simulateRisk: async (payload) => {
+    const res = await fetch(`${API_BASE}/simulator/simulate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse(res);
+  },
+
+  // Feature 5: Causal / Bow-Tie Safety Analysis
+  generateBowTie: async (payload) => {
+    const res = await fetch(`${API_BASE}/bowtie/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse(res);
+  },
+
+  getReportBowTie: async (reportId) => {
+    const res = await fetch(`${API_BASE}/bowtie/${reportId}`);
+    return handleResponse(res);
+  },
+
+  // Feature 6: Advanced AI Safety Copilot
+  askCopilot: async (payload) => {
+    const res = await fetch(`${API_BASE}/copilot/ask`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse(res);
+  },
+
+  // Feature 7: AI Quality & Human-in-the-Loop Validation 2.0
+  getQualityMetrics: async () => {
+    const res = await fetch(`${API_BASE}/quality/metrics`);
+    return handleResponse(res);
+  },
+
+  getQualityReviews: async () => {
+    const res = await fetch(`${API_BASE}/quality/reviews`);
+    return handleResponse(res);
+  },
+
+  submitQualityReview: async (payload) => {
+    const res = await fetch(`${API_BASE}/quality/submit-review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse(res);
+  },
+
+  // Feature 8: AI Decision Audit Trail & Trace
+  getAuditTraces: async (limit = 50, offset = 0) => {
+    const res = await fetch(`${API_BASE}/audit/traces?limit=${limit}&offset=${offset}`);
+    return handleResponse(res);
+  },
+
+  getAuditTraceByReport: async (reportId) => {
+    const res = await fetch(`${API_BASE}/audit/traces/${reportId}`);
+    return handleResponse(res);
+  },
+
+  // Feature 9: Safety Alert + Corrective Action Center
+  getAlerts: async () => {
+    const res = await fetch(`${API_BASE}/alerts`);
+    return handleResponse(res);
+  },
+
+  acknowledgeAlert: async (alertId, acknowledgedBy) => {
+    const res = await fetch(`${API_BASE}/alerts/${alertId}/ack`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acknowledged_by: acknowledgedBy }),
+    });
+    return handleResponse(res);
+  },
+
+  getActions: async () => {
+    const res = await fetch(`${API_BASE}/actions`);
+    return handleResponse(res);
+  },
+
+  createAction: async (payload) => {
+    const res = await fetch(`${API_BASE}/actions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse(res);
+  },
+
+  transitionAction: async (actionId, transitionPayload) => {
+    const res = await fetch(`${API_BASE}/actions/${actionId}/transition`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(transitionPayload),
+    });
+    return handleResponse(res);
+  },
+
+  // Feature 10: Predictive Safety Trend Forecasting
+  getForecast: async (horizonDays = 30) => {
+    const res = await fetch(`${API_BASE}/forecast?horizon_days=${horizonDays}`);
+    return handleResponse(res);
   },
 };
 
