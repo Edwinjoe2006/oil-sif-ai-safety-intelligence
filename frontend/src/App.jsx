@@ -59,6 +59,20 @@ export default function App() {
 
   return (
     <div className="app-layout">
+      {/* Mobile Backdrop Overlay */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 998,
+          }}
+        />
+      )}
+
       <Sidebar
         activePage={activePage}
         setActivePage={(p) => {
@@ -67,6 +81,8 @@ export default function App() {
         }}
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
+        mobileOpen={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
         health={health}
       />
 

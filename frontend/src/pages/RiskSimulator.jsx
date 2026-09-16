@@ -62,7 +62,7 @@ export default function RiskSimulator() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem', alignItems: 'start' }}>
+      <div className="responsive-two-col">
         {/* Interactive Controls */}
         <div className="glass-card" style={{ padding: '1.75rem' }}>
           <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '1.25rem' }}>
@@ -169,7 +169,7 @@ export default function RiskSimulator() {
             </span>
 
             {/* Current vs Simulated Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem', marginBottom: '1.25rem' }}>
+            <div className="responsive-form-grid" style={{ gap: '1rem', marginTop: '1rem', marginBottom: '1.25rem' }}>
               <div style={{ background: '#070D1E', padding: '1rem', borderRadius: '8px' }}>
                 <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: '700' }}>CURRENT SITUATION</div>
                 <div style={{ fontSize: '1.75rem', fontWeight: '900', color: '#CBD5E1', marginTop: '0.2rem' }}>{baselineRisk} / 100</div>

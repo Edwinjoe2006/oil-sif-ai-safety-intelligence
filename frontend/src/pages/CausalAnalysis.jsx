@@ -138,7 +138,8 @@ export default function CausalAnalysis() {
 
       {/* Bow-Tie 5-Column Visual Layout */}
       {bowtie && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr 1fr 1fr', gap: '1rem', alignItems: 'stretch' }}>
+        <div className="responsive-scroll-container">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr 1fr 1fr', gap: '1rem', alignItems: 'stretch', minWidth: '820px' }}>
           {/* Threats (Left) */}
           <div className="glass-card" style={{ padding: '1rem', borderLeft: '3px solid #EF4444' }}>
             <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#EF4444', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
@@ -225,6 +226,7 @@ export default function CausalAnalysis() {
             </div>
           </div>
         </div>
+      </div>
       )}
     </div>
   );

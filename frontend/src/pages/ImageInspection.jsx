@@ -209,7 +209,7 @@ export default function ImageInspection() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(340px, 1.15fr)', gap: '2rem', alignItems: 'start' }}>
+      <div className="responsive-two-col">
         {/* Input & Upload Panel */}
         <div className="glass-card" style={{ padding: '1.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
@@ -350,7 +350,7 @@ export default function ImageInspection() {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="responsive-form-grid" style={{ marginBottom: '1.5rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#CBD5E1', marginBottom: '0.35rem' }}>
                   Target Asset
@@ -676,7 +676,7 @@ export default function ImageInspection() {
               </div>
 
               {/* SIF & Barrier Summary */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', background: '#0B132B', padding: '0.85rem', borderRadius: '8px', marginBottom: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="responsive-form-grid" style={{ gap: '0.75rem', background: '#0B132B', padding: '0.85rem', borderRadius: '8px', marginBottom: '1.25rem', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <div>
                   <span style={{ fontSize: '0.68rem', color: '#64748B', textTransform: 'uppercase', fontWeight: '700' }}>BARRIER INTEGRITY</span>
                   <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#F1F5F9', marginTop: '0.15rem' }}>

@@ -18,7 +18,8 @@ import {
   GitCommit,
   Award,
   Bell,
-  CheckSquare
+  CheckSquare,
+  X
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -26,6 +27,8 @@ export default function Sidebar({
   setActivePage,
   collapsed,
   setCollapsed,
+  mobileOpen,
+  onCloseMobile,
   health
 }) {
   const sections = [
@@ -63,8 +66,16 @@ export default function Sidebar({
     }
   ];
 
+  const handleItemClick = (id) => {
+    setActivePage(id);
+    if (onCloseMobile) {
+      onCloseMobile();
+    }
+  };
+
   return (
     <aside
+      className={`sidebar-container ${mobileOpen ? 'mobile-open' : ''}`}
       style={{
         width: collapsed ? '80px' : '260px',
         backgroundColor: '#091124',
@@ -72,8 +83,8 @@ export default function Sidebar({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        transition: 'width 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-        zIndex: 10,
+        transition: 'width 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)',
+        zIndex: 999,
         flexShrink: 0,
         height: '100vh',
         overflowY: 'auto'
@@ -123,30 +134,84 @@ export default function Sidebar({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setCollapsed(!collapsed)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#64748B',
-              cursor: 'pointer',
-              display: collapsed ? 'none' : 'flex',
-            }}
-          >
-            <ChevronLeft size={18} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            {/* Desktop Collapse Toggle */}
+            <button
+              type="button"
+              onClick={() => setCollapsed(!collapsed)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#64748B',
+                cursor: 'pointer',
+                display: collapsed ? 'none' : 'flex',
+              }}
+              title="Collapse sidebar"
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            {/* Mobile Close Button */}
+            {onCloseMobile && (
+              <button
+                type="button"
+                className="mobile-close-btn"
+                onClick={onCloseMobile}
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#94A3B8',
+                  padding: '0.3rem',
+                  cursor: 'pointer',
+                }}
+                aria-label="Close menu"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Navigation Groups */}
-        <nav style={{ padding: '0.75rem 0.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {sections.map((sec, secIdx) => (
-            <div key={secIdx}>
+        {/* Collapsed Expand Button */}
+        {collapsed && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem 0' }}>
+            <button
+              type="button"
+              onClick={() => setCollapsed(false)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#64748B',
+                cursor: 'pointer',
+              }}
+              title="Expand sidebar"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
+
+        {/* Navigation Items */}
+        <nav style={{ padding: collapsed ? '0.75rem 0.5rem' : '1rem 0.85rem' }}>
+          {sections.map((sec, idx) => (
+            <div key={idx} style={{ marginBottom: '1.25rem' }}>
               {!collapsed && (
-                <div style={{ fontSize: '0.65rem', fontWeight: '800', color: '#475569', letterSpacing: '0.08em', padding: '0 0.75rem 0.35rem', textTransform: 'uppercase' }}>
+                <div
+                  style={{
+                    fontSize: '0.65rem',
+                    fontWeight: '800',
+                    color: '#475569',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    padding: '0 0.5rem',
+                    marginBottom: '0.4rem',
+                  }}
+                >
                   {sec.title}
                 </div>
               )}
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                 {sec.items.map((item) => {
                   const Icon = item.icon;
@@ -156,7 +221,7 @@ export default function Sidebar({
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => setActivePage(item.id)}
+                      onClick={() => handleItemClick(item.id)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -198,7 +263,7 @@ export default function Sidebar({
                 <Radio size={11} /> AI Engine
               </span>
               <span style={{ color: health?.models_loaded ? '#10B981' : '#F59E0B', fontWeight: '700' }}>
-                ? {health?.models_loaded ? 'Ready' : 'Standby'}
+                • {health?.models_loaded ? 'Ready' : 'Standby'}
               </span>
             </div>
 
@@ -207,7 +272,7 @@ export default function Sidebar({
                 <Database size={11} /> Database
               </span>
               <span style={{ color: health?.database_connected ? '#10B981' : '#EF4444', fontWeight: '700' }}>
-                ? {health?.database_connected ? 'Connected' : 'Offline'}
+                • {health?.database_connected ? 'Connected' : 'Offline'}
               </span>
             </div>
           </div>

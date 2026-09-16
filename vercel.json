@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://oil-sif-ai-safety-backend.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
