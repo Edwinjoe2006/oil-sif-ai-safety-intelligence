@@ -100,36 +100,58 @@ export default function ImageInspection() {
     }
   ];
 
+  // Derive separate PPE and Hazard findings
+  const ppeFindingsList = result?.ppe_findings?.length
+    ? result.ppe_findings
+    : result?.safety_checklist?.filter((item) => item.category === 'PPE Compliance') || [];
+
+  const hazardFindingsList = result?.hazard_findings?.length
+    ? result.hazard_findings
+    : result?.safety_checklist?.filter((item) => item.category !== 'PPE Compliance') || [];
+
   // Combine checklist bounding boxes and active hazards for overlay
   const allOverlayBoxes = [];
   if (result) {
-    // Add verified compliant items with boxes
-    result.safety_checklist?.forEach((item, idx) => {
+    ppeFindingsList.forEach((item, idx) => {
       if (item.bounding_box) {
         allOverlayBoxes.push({
-          id: `chk-${idx}`,
+          id: `ppe-${idx}`,
           label: item.item_name,
           status: item.status,
           is_compliant: item.is_compliant,
           confidence: item.confidence,
           bounding_box: item.bounding_box,
-          type: item.is_compliant ? 'compliant' : 'hazard'
+          type: item.is_compliant ? 'compliant' : 'hazard',
         });
       }
     });
 
-    // Add any detected hazards not already covered
-    result.detected_hazards?.forEach((h, idx) => {
-      if (h.bounding_box && !allOverlayBoxes.some(b => b.label === h.hazard_label)) {
+    hazardFindingsList.forEach((item, idx) => {
+      if (item.bounding_box && item.status === 'DETECTED') {
         allOverlayBoxes.push({
           id: `haz-${idx}`,
+          label: item.item_name,
+          status: item.status,
+          is_compliant: false,
+          confidence: item.confidence,
+          bounding_box: item.bounding_box,
+          type: 'hazard',
+          severity: item.severity_level || 'HIGH',
+        });
+      }
+    });
+
+    result.detected_hazards?.forEach((h, idx) => {
+      if (h.bounding_box && !allOverlayBoxes.some((b) => b.label === h.hazard_label)) {
+        allOverlayBoxes.push({
+          id: `dhaz-${idx}`,
           label: h.hazard_label,
           status: h.status || 'DETECTED',
           is_compliant: false,
           confidence: h.confidence,
           bounding_box: h.bounding_box,
           type: 'hazard',
-          severity: h.severity_level
+          severity: h.severity_level,
         });
       }
     });
@@ -146,7 +168,7 @@ export default function ImageInspection() {
           AI Image Safety Inspection
         </h2>
         <p style={{ fontSize: '0.9rem', color: '#CBD5E1', marginTop: '0.25rem' }}>
-          Real computer vision multi-target analysis for PPE compliance, flange leaks, surface corrosion, and liquid pooling with spatial bounding boxes.
+          Real pixel-level computer vision analysis distinguishing PPE compliance from physical hazards (flange leaks, corrosion, liquid pooling) with spatial bounding boxes.
         </p>
       </div>
 
@@ -166,14 +188,14 @@ export default function ImageInspection() {
         }}
       >
         <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#38BDF8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          Inspection Engine:
+          Inspection Pipeline:
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
           {[
-            { label: 'IMAGE INGESTION', desc: 'Real raw byte decoding', color: '#94A3B8' },
-            { label: 'MULTI-TARGET CV', desc: 'PPE, Leaks, Rust, Pooling', color: '#38BDF8' },
-            { label: 'SPATIAL BOXES', desc: 'Precision coordinate mapping', color: '#10B981' },
-            { label: 'RISK ENGINE', desc: 'SIF probability & barrier status', color: '#EF4444' },
+            { label: 'IMAGE INGESTION', desc: 'Real pixel byte decoding', color: '#94A3B8' },
+            { label: 'PPE CLASSIFICATION', desc: 'Positive vs Missing PPE', color: '#10B981' },
+            { label: 'HAZARD SCAN', desc: 'Leaks, Corrosion, Pooling', color: '#EF4444' },
+            { label: 'RISK ENGINE', desc: 'SIF risk score synthesis', color: '#38BDF8' },
           ].map((item, idx, arr) => (
             <React.Fragment key={idx}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.03)', padding: '0.3rem 0.65rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -374,7 +396,7 @@ export default function ImageInspection() {
               </span>
               {result && (
                 <span style={{ fontSize: '0.72rem', color: '#38BDF8', fontWeight: '700' }}>
-                  {allOverlayBoxes.length} Bounding Regions Mapped
+                  {allOverlayBoxes.length} Spatial Regions Mapped
                 </span>
               )}
             </div>
@@ -481,11 +503,11 @@ export default function ImageInspection() {
                 borderTop: `4px solid ${result.sif_risk_rating === 'CRITICAL' ? '#EF4444' : result.sif_risk_rating === 'HIGH' ? '#F97316' : '#10B981'}`,
               }}
             >
-              {/* Top Banner with Model Indicator */}
+              {/* Top Banner with Real Model Indicator */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.2rem 0.55rem', borderRadius: '4px', fontSize: '0.7rem', color: '#38BDF8', fontWeight: '800', marginBottom: '0.35rem' }}>
-                    <ShieldCheck size={12} /> Real image analysis completed (Model: {result.vision_model_engine || 'Local CV Multi-Target Analyzer'})
+                    <ShieldCheck size={12} /> Real image analysis completed (Model: {result.vision_model_engine || 'Local CV Multi-Target Engine'})
                   </div>
                   <h4 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#FFFFFF', margin: '0.2rem 0 0' }}>
                     RISK LEVEL: {result.sif_risk_rating}
@@ -498,7 +520,7 @@ export default function ImageInspection() {
                   <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#38BDF8', lineHeight: 1 }}>
                     {Math.round(result.overall_confidence * 100)}%
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: '700' }}>AI CONFIDENCE</div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: '700' }}>OVERALL CONFIDENCE</div>
                 </div>
               </div>
 
@@ -507,123 +529,150 @@ export default function ImageInspection() {
                 <strong style={{ color: '#38BDF8' }}>System Distinction:</strong> Visual elements detected by Computer Vision; Risk score and SIF classification synthesized by the OIL-SIF-AI Risk Engine.
               </div>
 
-              {/* Multi-Target Safety Audit Matrix */}
-              {result.safety_checklist?.length > 0 && (
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#CBD5E1', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
-                    MULTI-TARGET SAFETY AUDIT MATRIX ({result.safety_checklist.length} TARGETS):
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                    {result.safety_checklist.map((item, i) => {
-                      const isDetected = item.status === 'DETECTED';
-                      const isUncertain = item.status === 'UNCERTAIN';
-                      const isCompliant = item.is_compliant;
-                      
-                      let badgeBg = 'rgba(255,255,255,0.05)';
-                      let badgeColor = '#94A3B8';
-                      let statusText = 'NOT DETECTED';
-
-                      if (isDetected && isCompliant) {
-                        badgeBg = 'rgba(16, 185, 129, 0.15)';
-                        badgeColor = '#10B981';
-                        statusText = 'DETECTED (COMPLIANT)';
-                      } else if (isDetected && !isCompliant) {
-                        badgeBg = 'rgba(239, 68, 68, 0.15)';
-                        badgeColor = '#EF4444';
-                        statusText = 'DETECTED (HAZARD)';
-                      } else if (isUncertain) {
-                        badgeBg = 'rgba(245, 158, 11, 0.15)';
-                        badgeColor = '#F59E0B';
-                        statusText = 'UNCERTAIN (REVIEW REQUIRED)';
-                      }
-
-                      return (
-                        <div
-                          key={i}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '0.55rem 0.75rem',
-                            background: 'rgba(15, 23, 42, 0.6)',
-                            borderRadius: '6px',
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            gap: '0.5rem',
-                            flexWrap: 'wrap'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                            {isCompliant ? (
-                              <CheckCircle2 size={15} color="#10B981" />
-                            ) : isDetected ? (
-                              <AlertCircle size={15} color="#EF4444" />
-                            ) : isUncertain ? (
-                              <HelpCircle size={15} color="#F59E0B" />
-                            ) : (
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#475569', display: 'inline-block' }} />
-                            )}
-                            <div>
-                              <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#F1F5F9' }}>
-                                {item.item_name}
-                              </span>
-                              <span style={{ fontSize: '0.7rem', color: '#64748B', marginLeft: '0.4rem' }}>
-                                [{item.category}]
-                              </span>
-                              <p style={{ fontSize: '0.72rem', color: '#94A3B8', margin: '0.1rem 0 0' }}>
-                                {item.details}
-                              </p>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ fontSize: '0.68rem', fontWeight: '800', padding: '0.2rem 0.5rem', borderRadius: '4px', background: badgeBg, color: badgeColor }}>
-                              {statusText}
-                            </span>
-                            <span style={{ fontSize: '0.72rem', color: '#38BDF8', fontWeight: '700' }}>
-                              {Math.round(item.confidence * 100)}%
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Detected Active Hazards */}
+              {/* ========================================================================= */}
+              {/* POSITIVE & NEGATIVE FINDINGS: 1. PPE COMPLIANCE FINDINGS */}
+              {/* ========================================================================= */}
               <div style={{ marginBottom: '1.25rem' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#CBD5E1', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
-                  ACTIVE HAZARDS REQUIRING ATTENTION ({result.detected_hazards?.length || 0}):
+                <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Shield size={14} /> PPE COMPLIANCE FINDINGS ({ppeFindingsList.length}):
                 </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                  {ppeFindingsList.map((item, i) => {
+                    const isDetected = item.status === 'DETECTED';
+                    const isMissing = item.status === 'MISSING';
+                    const isUncertain = item.status === 'UNCERTAIN';
+                    const isCompliant = item.is_compliant;
 
-                {result.detected_hazards?.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                    {result.detected_hazards.map((h, i) => (
+                    let statusBadgeBg = 'rgba(255,255,255,0.05)';
+                    let statusBadgeColor = '#94A3B8';
+                    let statusText = 'NOT DETECTED';
+                    let icon = <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#475569', display: 'inline-block' }} />;
+
+                    if (isDetected && isCompliant) {
+                      statusBadgeBg = 'rgba(16, 185, 129, 0.15)';
+                      statusBadgeColor = '#10B981';
+                      statusText = '✓ DETECTED (COMPLIANT)';
+                      icon = <CheckCircle2 size={15} color="#10B981" />;
+                    } else if (isMissing) {
+                      statusBadgeBg = 'rgba(239, 68, 68, 0.15)';
+                      statusBadgeColor = '#EF4444';
+                      statusText = '✕ MISSING PPE (VIOLATION)';
+                      icon = <AlertCircle size={15} color="#EF4444" />;
+                    } else if (isUncertain) {
+                      statusBadgeBg = 'rgba(245, 158, 11, 0.15)';
+                      statusBadgeColor = '#F59E0B';
+                      statusText = '❓ UNCERTAIN (REVIEW REQUIRED)';
+                      icon = <HelpCircle size={15} color="#F59E0B" />;
+                    }
+
+                    return (
                       <div
                         key={i}
                         style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0.6rem 0.8rem',
                           background: 'rgba(15, 23, 42, 0.6)',
-                          padding: '0.85rem',
-                          borderRadius: '8px',
-                          borderLeft: `4px solid ${h.severity_level === 'CRITICAL' ? '#EF4444' : '#F59E0B'}`,
-                          transition: 'all 0.15s ease',
+                          borderRadius: '6px',
+                          border: `1px solid ${isCompliant ? 'rgba(16, 185, 129, 0.2)' : isMissing ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)'}`,
+                          gap: '0.5rem',
+                          flexWrap: 'wrap'
                         }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: '800', color: '#F8FAFC' }}>
-                          <span>• {h.hazard_label}</span>
-                          <span style={{ color: '#38BDF8', fontSize: '0.75rem' }}>{Math.round(h.confidence * 100)}% Confidence</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {icon}
+                          <div>
+                            <span style={{ fontSize: '0.825rem', fontWeight: '800', color: '#F1F5F9' }}>
+                              {item.item_name}
+                            </span>
+                            <p style={{ fontSize: '0.74rem', color: '#CBD5E1', margin: '0.15rem 0 0', lineHeight: 1.35 }}>
+                              {item.details}
+                            </p>
+                          </div>
                         </div>
-                        <p style={{ fontSize: '0.8rem', color: '#CBD5E1', margin: '0.35rem 0 0', lineHeight: 1.4 }}>
-                          {h.description}
-                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: '800', padding: '0.2rem 0.5rem', borderRadius: '4px', background: statusBadgeBg, color: statusBadgeColor }}>
+                            {statusText}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: '#38BDF8', fontWeight: '700' }}>
+                            {Math.round(item.confidence * 100)}%
+                          </span>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ padding: '0.85rem 1rem', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34D399', fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <CheckCircle2 size={18} />
-                    <span><strong>Clean Visual Inspection:</strong> No active fluid leaks, corrosion thinning, or unsafe conditions detected in this scan.</span>
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ========================================================================= */}
+              {/* POSITIVE & NEGATIVE FINDINGS: 2. PHYSICAL HAZARD FINDINGS */}
+              {/* ========================================================================= */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <AlertTriangle size={14} /> PHYSICAL HAZARDS & PRECURSORS ({hazardFindingsList.length}):
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                  {hazardFindingsList.map((item, i) => {
+                    const isDetected = item.status === 'DETECTED';
+                    const isUncertain = item.status === 'UNCERTAIN';
+                    const isCritical = item.severity_level === 'CRITICAL';
+
+                    let statusBadgeBg = 'rgba(255,255,255,0.05)';
+                    let statusBadgeColor = '#94A3B8';
+                    let statusText = 'NOT DETECTED (SAFE)';
+                    let icon = <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#475569', display: 'inline-block' }} />;
+
+                    if (isDetected) {
+                      statusBadgeBg = isCritical ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)';
+                      statusBadgeColor = isCritical ? '#EF4444' : '#F59E0B';
+                      statusText = `⚠ DETECTED (${item.severity_level || 'HAZARD'})`;
+                      icon = <AlertCircle size={15} color={isCritical ? '#EF4444' : '#F59E0B'} />;
+                    } else if (isUncertain) {
+                      statusBadgeBg = 'rgba(245, 158, 11, 0.15)';
+                      statusBadgeColor = '#F59E0B';
+                      statusText = '❓ UNCERTAIN (HUMAN VERIFICATION REQUIRED)';
+                      icon = <HelpCircle size={15} color="#F59E0B" />;
+                    }
+
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0.6rem 0.8rem',
+                          background: isDetected ? 'rgba(239, 68, 68, 0.04)' : 'rgba(15, 23, 42, 0.6)',
+                          borderRadius: '6px',
+                          border: `1px solid ${isDetected ? (isCritical ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)') : 'rgba(255,255,255,0.05)'}`,
+                          gap: '0.5rem',
+                          flexWrap: 'wrap'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {icon}
+                          <div>
+                            <span style={{ fontSize: '0.825rem', fontWeight: '800', color: isDetected ? (isCritical ? '#FCA5A5' : '#FDE68A') : '#F1F5F9' }}>
+                              {item.item_name}
+                            </span>
+                            <p style={{ fontSize: '0.74rem', color: '#CBD5E1', margin: '0.15rem 0 0', lineHeight: 1.35 }}>
+                              {item.details}
+                            </p>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: '800', padding: '0.2rem 0.5rem', borderRadius: '4px', background: statusBadgeBg, color: statusBadgeColor }}>
+                            {statusText}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: '#38BDF8', fontWeight: '700' }}>
+                            {Math.round(item.confidence * 100)}%
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* SIF & Barrier Summary */}

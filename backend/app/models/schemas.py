@@ -221,6 +221,8 @@ class VisionInspectionRequest(BaseModel):
 class VisionInspectionResponse(BaseModel):
     inspection_id: str
     vision_model_engine: Optional[str] = "Real Computer Vision Multi-Target Feature Analyzer"
+    ppe_findings: Optional[List[VisualAuditItem]] = []
+    hazard_findings: Optional[List[VisualAuditItem]] = []
     detected_hazards: List[DetectedVisualHazard]
     safety_checklist: Optional[List[VisualAuditItem]] = []
     sif_risk_rating: str  # CRITICAL, HIGH, MEDIUM, LOW

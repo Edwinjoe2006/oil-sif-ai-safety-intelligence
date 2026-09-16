@@ -554,10 +554,15 @@ class VisionSafetyInspectionService:
         """Connects detected visual hazards to the Risk Engine and generates recommendations."""
         human_verification_needed = any(item.get("status") == "UNCERTAIN" for item in safety_checklist)
 
+        ppe_findings = [item for item in safety_checklist if item.get("category") == "PPE Compliance"]
+        hazard_findings = [item for item in safety_checklist if item.get("category") != "PPE Compliance"]
+
         if not detected_hazards:
             return {
                 "inspection_id": inspection_id,
                 "vision_model_engine": vision_engine,
+                "ppe_findings": ppe_findings,
+                "hazard_findings": hazard_findings,
                 "detected_hazards": [],
                 "safety_checklist": safety_checklist,
                 "sif_risk_rating": "LOW",
@@ -623,6 +628,8 @@ class VisionSafetyInspectionService:
         return {
             "inspection_id": inspection_id,
             "vision_model_engine": vision_engine,
+            "ppe_findings": ppe_findings,
+            "hazard_findings": hazard_findings,
             "detected_hazards": detected_hazards,
             "safety_checklist": safety_checklist,
             "sif_risk_rating": sif_rating,

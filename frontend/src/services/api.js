@@ -1,3 +1,5 @@
+import { analyzeImagePixels } from './clientVisionAnalyzer';
+
 let base = import.meta.env.VITE_API_BASE_URL || '/api';
 if (base.startsWith('http')) {
   base = base.replace(/\/+$/, '');
@@ -565,28 +567,38 @@ export const api = {
       }
       return await handleResponse(res);
     } catch (err) {
-      console.warn('API inspectSafetyImage fallback:', err.message);
+      console.warn('Backend API unavailable, executing client-side computer vision pixel analyzer:', err.message);
+
+      let imageSource = null;
+      if (payloadOrFormData instanceof FormData) {
+        imageSource = payloadOrFormData.get('file');
+      } else if (payloadOrFormData) {
+        imageSource = payloadOrFormData.image_base64 || payloadOrFormData.image_url;
+      }
+
+      if (imageSource) {
+        try {
+          return await analyzeImagePixels(imageSource);
+        } catch (cvErr) {
+          console.error('Client-side vision pixel analysis failed:', cvErr);
+        }
+      }
+
       return {
         inspection_id: 'VIS-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-        hazard_domain: 'Missing Required High-Visibility PPE & Hard Hat',
-        sif_risk_rating: 'HIGH',
-        sif_probability: 0.78,
-        risk_score: 72,
-        overall_confidence: 0.92,
-        detected_hazards: [
-          {
-            hazard_label: 'Missing Required High-Visibility PPE & Hard Hat',
-            confidence: 0.92,
-            severity_level: 'HIGH',
-            bounding_box: { ymin: 0.08, xmin: 0.32, ymax: 0.62, xmax: 0.68 },
-            description: 'Personnel profile identified in operational area without detectable high-visibility safety apparel or rated protective headwear.'
-          }
-        ],
-        barrier_integrity_status: 'Degraded — Priority Inspection Required',
-        recommended_safety_action: [
-          'Enforce 100% PPE compliance (ANSI Z89.1 hard hat & high-vis vest) before entering zone',
-          'Verify area access controls and conduct safety stand-down'
-        ],
+        vision_model_engine: 'Client-Side Safety Analyzer',
+        ppe_findings: [],
+        hazard_findings: [],
+        detected_hazards: [],
+        safety_checklist: [],
+        sif_risk_rating: 'LOW',
+        sif_probability: 0.05,
+        risk_score: 10,
+        overall_confidence: 0.50,
+        hazard_domain: 'Insufficient Visual Evidence',
+        barrier_integrity_status: 'Unverified — Insufficient Visual Evidence',
+        recommended_safety_action: ['Provide a clear, illuminated JPG/PNG image of the equipment or work area for AI inspection.'],
+        human_verification_required: true,
         inspected_at: new Date().toISOString()
       };
     }
