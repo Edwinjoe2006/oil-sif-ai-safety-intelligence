@@ -220,10 +220,16 @@ class VisionInspectionRequest(BaseModel):
 
 class VisionInspectionResponse(BaseModel):
     inspection_id: str
-    vision_model_engine: Optional[str] = "Real Computer Vision Multi-Target Feature Analyzer"
+    vision_model_engine: Optional[str] = "Real Computer Vision Multi-Target Spatial Analyzer"
+    image_data: Optional[str] = None  # Normalized Base64 data URI for reliable preview & persistence
+    image_url: Optional[str] = None
+    image_source_type: Optional[str] = "upload"
+    target_asset: Optional[str] = None
+    facility_location: Optional[str] = "Operational Site"
+    inspector_notes: Optional[str] = None
     ppe_findings: Optional[List[VisualAuditItem]] = []
     hazard_findings: Optional[List[VisualAuditItem]] = []
-    detected_hazards: List[DetectedVisualHazard]
+    detected_hazards: List[DetectedVisualHazard] = []
     safety_checklist: Optional[List[VisualAuditItem]] = []
     sif_risk_rating: str  # CRITICAL, HIGH, MEDIUM, LOW
     sif_probability: float
@@ -233,7 +239,75 @@ class VisionInspectionResponse(BaseModel):
     barrier_integrity_status: str
     recommended_safety_action: List[str]
     human_verification_required: Optional[bool] = False
+    verification_status: Optional[str] = "PENDING REVIEW"
+    reviewer_name: Optional[str] = None
     inspected_at: datetime
+
+
+class VisionSaveRequest(BaseModel):
+    inspection_id: str
+    image_data: Optional[str] = None
+    image_url: Optional[str] = None
+    image_source_type: Optional[str] = "upload"
+    filename: Optional[str] = None
+    target_asset: Optional[str] = None
+    facility_location: Optional[str] = "Operational Site"
+    inspector_notes: Optional[str] = None
+    ppe_findings: Optional[List[Dict[str, Any]]] = []
+    hazard_findings: Optional[List[Dict[str, Any]]] = []
+    detected_hazards: Optional[List[Dict[str, Any]]] = []
+    safety_checklist: Optional[List[Dict[str, Any]]] = []
+    overall_confidence: Optional[float] = 0.90
+    risk_score: Optional[int] = 50
+    sif_risk_rating: Optional[str] = "MEDIUM"
+    sif_probability: Optional[float] = 0.50
+    hazard_domain: Optional[str] = "General Safety"
+    barrier_integrity_status: Optional[str] = None
+    recommended_safety_action: Optional[List[str]] = []
+    vision_model_engine: Optional[str] = "Real Computer Vision Multi-Target Spatial Analyzer"
+    human_verification_required: Optional[bool] = False
+    verification_status: Optional[str] = "VERIFIED"
+    reviewer_name: Optional[str] = "HSE Safety Inspector"
+    reviewer_notes: Optional[str] = None
+    inspected_at: Optional[datetime] = None
+
+
+class VisionSaveResponse(BaseModel):
+    success: bool
+    inspection_id: str
+    record_id: Optional[int] = None
+    message: str
+    saved_at: datetime
+
+
+class VisionHistoryItem(BaseModel):
+    id: int
+    inspection_id: str
+    image_source_type: str
+    image_url: Optional[str] = None
+    image_data: Optional[str] = None
+    target_asset: Optional[str] = None
+    facility_location: str
+    inspector_notes: Optional[str] = None
+    risk_score: int
+    sif_risk_rating: str
+    sif_probability: float
+    hazard_domain: str
+    detected_hazards_count: int
+    ppe_findings_count: int
+    overall_confidence: float
+    barrier_integrity_status: Optional[str] = None
+    recommended_safety_action: List[str] = []
+    ppe_findings: List[Dict[str, Any]] = []
+    hazard_findings: List[Dict[str, Any]] = []
+    detected_hazards: List[Dict[str, Any]] = []
+    safety_checklist: List[Dict[str, Any]] = []
+    vision_model_engine: str
+    verification_status: str
+    reviewer_name: Optional[str] = None
+    reviewer_notes: Optional[str] = None
+    inspected_at: datetime
+    created_at: datetime
 
 
 # --- PDF Safety Report Analysis ---

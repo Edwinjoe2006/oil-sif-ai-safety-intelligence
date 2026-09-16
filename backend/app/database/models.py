@@ -154,3 +154,35 @@ class AnalysisHistory(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
     details = Column(JSON, nullable=True)
 
+
+class VisionInspectionRecord(Base):
+    __tablename__ = "vision_inspections"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    inspection_id = Column(String(100), unique=True, index=True, nullable=False)
+    image_source_type = Column(String(50), default="upload")  # "upload" | "url" | "preset"
+    image_url = Column(String(1000), nullable=True)
+    image_data = Column(Text, nullable=True)  # Base64 data URI or persistent storage path
+    filename = Column(String(255), nullable=True)
+    target_asset = Column(String(150), nullable=True)
+    facility_location = Column(String(150), default="Operational Site")
+    inspector_notes = Column(Text, nullable=True)
+    ppe_findings = Column(JSON, default=list)
+    hazard_findings = Column(JSON, default=list)
+    detected_hazards = Column(JSON, default=list)
+    safety_checklist = Column(JSON, default=list)
+    overall_confidence = Column(Float, default=0.90)
+    risk_score = Column(Integer, default=50)
+    sif_risk_rating = Column(String(50), default="MEDIUM")
+    sif_probability = Column(Float, default=0.50)
+    hazard_domain = Column(String(150), default="General Safety")
+    barrier_integrity_status = Column(String(255), nullable=True)
+    recommended_safety_action = Column(JSON, default=list)
+    vision_model_engine = Column(String(150), default="Real Computer Vision Multi-Target Spatial Analyzer")
+    human_verification_required = Column(Boolean, default=False)
+    verification_status = Column(String(50), default="VERIFIED")  # "VERIFIED" | "PENDING REVIEW" | "REJECTED" | "REQUIRES REVIEW"
+    reviewer_name = Column(String(100), default="HSE Safety Inspector")
+    reviewer_notes = Column(Text, nullable=True)
+    inspected_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+

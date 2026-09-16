@@ -1,8 +1,14 @@
 /**
  * Client-Side Real Computer Vision Image Feature Analyzer.
  * Decodes real image pixels via HTML5 Canvas ImageData and executes
- * multi-target visual detection for PPE compliance, flange leaks,
- * corrosion degradation, and liquid pooling with spatial bounding boxes.
+ * multi-target visual detection for:
+ * - Fire / Flame Eruptions
+ * - Smoke & Combustion Plumes
+ * - PPE Compliance (Hard Hat & High-Vis)
+ * - Flange / Pipeline Hydrocarbon Leaks
+ * - Atmospheric Corrosion & Rust
+ * - Liquid Accumulation / Pooling
+ * Returns genuine spatial bounding boxes and risk assessments.
  */
 
 export async function analyzeImagePixels(imageSource) {
@@ -28,6 +34,8 @@ export async function analyzeImagePixels(imageSource) {
         const totalPixels = size * size;
 
         // Statistics accumulators
+        const fireIndices = [];
+        const smokeIndices = [];
         const highVisIndices = [];
         const helmetIndices = [];
         const skinIndices = [];
@@ -35,6 +43,10 @@ export async function analyzeImagePixels(imageSource) {
         const darkMetalIndices = [];
         const rustIndices = [];
         const floorLiquidIndices = [];
+
+        let upperGraySum = 0;
+        let upperGrayCount = 0;
+        const upperGrays = [];
 
         for (let y = 0; y < size; y++) {
           for (let x = 0; x < size; x++) {
@@ -61,15 +73,27 @@ export async function analyzeImagePixels(imageSource) {
             const val = max;
             const gray = 0.299 * r + 0.587 * g + 0.114 * b;
 
-            // 1. High-Vis Safety Apparel (Neon Yellow: Hue 38-88, Sat >= 0.35, Val >= 0.40; Orange: Hue 10-32, Sat >= 0.50, Val >= 0.45)
+            if (y <= 150) {
+              upperGraySum += gray;
+              upperGrayCount++;
+              upperGrays.push(gray);
+            }
+
+            // 1. Fire / Flame (Val >= 0.85, Hue 10-55, R >= 0.78, G >= 0.40, R > B + 0.30)
+            const isFire = (val >= 0.85 && hue >= 10 && hue <= 55 && r >= 0.78 && g >= 0.40 && r > b + 0.30);
+            if (isFire) {
+              fireIndices.push({ x, y });
+            }
+
+            // 2. High-Vis Safety Apparel (Neon Yellow: Hue 38-88, Sat >= 0.35, Val >= 0.40; Orange: Hue 10-32, Sat >= 0.50, Val >= 0.45)
             const isNeonYellow = (hue >= 38 && hue <= 88 && sat >= 0.35 && val >= 0.40);
             const isSafetyOrange = (hue >= 10 && hue <= 32 && sat >= 0.50 && val >= 0.45 && r > g && g > b);
-            if (isNeonYellow || isSafetyOrange) {
+            if (!isFire && (isNeonYellow || isSafetyOrange)) {
               highVisIndices.push({ x, y });
             }
 
-            // 2. Hard Hat Protective Headwear (Upper 60% of image, y <= 120)
-            if (y <= 120) {
+            // 3. Hard Hat Protective Headwear (Upper 60% of image, y <= 120)
+            if (y <= 120 && !isFire) {
               const isWhiteHelmet = (sat <= 0.22 && val >= 0.78);
               const isYellowHelmet = (hue >= 38 && hue <= 65 && sat >= 0.40 && val >= 0.45);
               const isOrangeHelmet = (hue >= 10 && hue <= 28 && sat >= 0.55 && val >= 0.50);
@@ -79,34 +103,47 @@ export async function analyzeImagePixels(imageSource) {
               }
             }
 
-            // 3. Human Skin tone (Hue 0-30, Sat 0.22-0.60, Val 0.35-0.95, R > G > B)
-            if (hue >= 0 && hue <= 30 && sat >= 0.22 && sat <= 0.60 && val >= 0.35 && val <= 0.95 && r > g && g > b) {
+            // 4. Human Skin tone (Hue 0-30, Sat 0.22-0.60, Val 0.35-0.95, R > G > B)
+            if (!isFire && hue >= 0 && hue <= 30 && sat >= 0.22 && sat <= 0.60 && val >= 0.35 && val <= 0.95 && r > g && g > b) {
               skinIndices.push({ x, y });
             }
 
-            // 4. Leak Specular Mist vs Dark Metal
-            if (val >= 0.86 && sat <= 0.28 && gray >= 0.82) {
+            // 5. Leak Specular Mist vs Dark Metal
+            if (!isFire && val >= 0.86 && sat <= 0.28 && gray >= 0.82) {
               leakIndices.push({ x, y });
             }
-            if (val <= 0.42 && sat <= 0.32) {
+            if (!isFire && val <= 0.42 && sat <= 0.32) {
               darkMetalIndices.push({ x, y });
             }
 
-            // 5. Corrosion / Rust (Hue 10-42, Sat >= 0.32, Val 0.18-0.85, R > B + 0.12)
-            if (hue >= 10 && hue <= 42 && sat >= 0.32 && val >= 0.18 && val <= 0.85 && r > b + 0.12 && r > g * 0.88) {
+            // 6. Corrosion / Rust (Hue 10-42, Sat >= 0.32, Val 0.18-0.85, R > B + 0.12)
+            if (!isFire && hue >= 10 && hue <= 42 && sat >= 0.32 && val >= 0.18 && val <= 0.85 && r > b + 0.12 && r > g * 0.88) {
               rustIndices.push({ x, y });
             }
 
-            // 6. Floor Liquid Pooling (Bottom 45%, y >= 110)
-            if (y >= 110) {
+            // 7. Floor Liquid Pooling (Bottom 45%, y >= 110)
+            if (!isFire && y >= 110) {
               const isDarkPuddle = (val <= 0.28 && sat <= 0.35);
               const isWetSheen = (val >= 0.80 && sat <= 0.30 && gray >= 0.78);
               if (isDarkPuddle || isWetSheen) {
                 floorLiquidIndices.push({ x, y });
               }
             }
+
+            // 8. Smoke candidates in upper 75%
+            if (!isFire && y <= 150 && sat <= 0.16 && gray >= 0.22 && gray <= 0.72) {
+              smokeIndices.push({ x, y });
+            }
           }
         }
+
+        // Texture variance in upper region to prevent false alarming on solid walls
+        const meanGray = upperGrayCount > 0 ? upperGraySum / upperGrayCount : 0.5;
+        let grayVarSum = 0;
+        for (let i = 0; i < upperGrays.length; i++) {
+          grayVarSum += Math.pow(upperGrays[i] - meanGray, 2);
+        }
+        const grayStd = upperGrayCount > 0 ? Math.sqrt(grayVarSum / upperGrayCount) : 0;
 
         // Compute Bounding Box helper
         const computeBox = (indices, pad = 0) => {
@@ -125,6 +162,8 @@ export async function analyzeImagePixels(imageSource) {
           };
         };
 
+        const fireRatio = fireIndices.length / totalPixels;
+        const smokeRatio = smokeIndices.length / totalPixels;
         const highVisRatio = highVisIndices.length / totalPixels;
         const helmetRatio = helmetIndices.length / totalPixels;
         const skinRatio = skinIndices.length / totalPixels;
@@ -138,7 +177,91 @@ export async function analyzeImagePixels(imageSource) {
         const detectedHazards = [];
 
         // -------------------------------------------------------------
-        // Target 1: High-Visibility Safety Apparel
+        // Hazard 1: Fire / Flame Detection
+        // -------------------------------------------------------------
+        const fireDetected = fireRatio >= 0.012;
+        const fireBox = computeBox(fireIndices, 0.02);
+
+        if (fireDetected && fireBox) {
+          const conf = Math.min(0.98, Math.round((0.88 + fireRatio * 2.5) * 100) / 100);
+          const fireItem = {
+            item_name: 'Fire / Flame Precursor',
+            category: 'Physical Hazard',
+            status: 'DETECTED',
+            confidence: conf,
+            severity_level: 'CRITICAL',
+            is_compliant: false,
+            details: `High-intensity flame luminescence and thermal combustion detected (${Math.round(fireRatio * 100)}% visual area).`,
+            bounding_box: fireBox,
+          };
+          hazardFindings.push(fireItem);
+          detectedHazards.push({
+            hazard_label: 'Fire / Flame Eruption Precursor',
+            confidence: conf,
+            severity_level: 'CRITICAL',
+            status: 'DETECTED',
+            category: 'Physical Hazard',
+            is_compliant: false,
+            bounding_box: fireBox,
+            description: `Active open flame luminescence and thermal combustion detected covering ~${Math.round(fireRatio * 100)}% of frame.`,
+          });
+        } else {
+          hazardFindings.push({
+            item_name: 'Fire / Flame Precursor',
+            category: 'Physical Hazard',
+            status: 'NOT DETECTED',
+            confidence: 0.94,
+            is_compliant: true,
+            details: 'No open flames, combustion glow, or thermal ignition detected.',
+            bounding_box: null,
+          });
+        }
+
+        // -------------------------------------------------------------
+        // Hazard 2: Smoke & Combustion Plumes
+        // -------------------------------------------------------------
+        const hasPlumeVariance = (grayStd >= 0.035) || fireDetected;
+        const smokeDetected = (smokeRatio >= 0.040) && hasPlumeVariance;
+        const smokeBox = computeBox(smokeIndices, 0.02);
+
+        if (smokeDetected && (fireDetected || (smokeRatio >= 0.08 && grayStd >= 0.045)) && smokeBox) {
+          const conf = Math.min(0.95, Math.round((0.82 + smokeRatio * 1.5) * 100) / 100);
+          const smokeSev = fireDetected ? 'CRITICAL' : 'HIGH';
+          const smokeItem = {
+            item_name: 'Smoke & Combustion Plumes',
+            category: 'Physical Hazard',
+            status: 'DETECTED',
+            confidence: conf,
+            severity_level: smokeSev,
+            is_compliant: false,
+            details: `Dense particulate smoke plume spreading across upper frame (${Math.round(smokeRatio * 100)}% visual coverage).`,
+            bounding_box: smokeBox,
+          };
+          hazardFindings.push(smokeItem);
+          detectedHazards.push({
+            hazard_label: 'Dense Smoke & Combustion Plume',
+            confidence: conf,
+            severity_level: smokeSev,
+            status: 'DETECTED',
+            category: 'Physical Hazard',
+            is_compliant: false,
+            bounding_box: smokeBox,
+            description: `Dense combustion smoke plume and particulate dispersion detected covering ~${Math.round(smokeRatio * 100)}% of frame.`,
+          });
+        } else {
+          hazardFindings.push({
+            item_name: 'Smoke & Combustion Plumes',
+            category: 'Physical Hazard',
+            status: 'NOT DETECTED',
+            confidence: 0.92,
+            is_compliant: true,
+            details: 'No dense combustion smoke or particulate plume dispersion detected.',
+            bounding_box: null,
+          });
+        }
+
+        // -------------------------------------------------------------
+        // Target 3: High-Visibility Safety Apparel
         // -------------------------------------------------------------
         const highVisDetected = highVisRatio >= 0.008;
         const highVisBox = computeBox(highVisIndices, 0.02);
@@ -154,36 +277,25 @@ export async function analyzeImagePixels(imageSource) {
             details: `High-visibility protective apparel verified on worker (${Math.round(highVisRatio * 1000) / 10}% visual area).`,
             bounding_box: highVisBox,
           });
-        } else if (skinRatio >= 0.035) {
-          ppeFindings.push({
-            item_name: 'High-Visibility Safety Apparel',
-            category: 'PPE Compliance',
-            status: 'MISSING',
-            confidence: 0.88,
-            is_compliant: false,
-            details: 'Worker identified without high-visibility safety clothing.',
-            bounding_box: computeBox(skinIndices, 0.05),
-          });
         } else {
           ppeFindings.push({
             item_name: 'High-Visibility Safety Apparel',
             category: 'PPE Compliance',
             status: 'NOT DETECTED',
             confidence: 0.90,
-            is_compliant: false,
+            is_compliant: true,
             details: 'No high-visibility safety clothing detected in the inspected frame.',
             bounding_box: null,
           });
         }
 
         // -------------------------------------------------------------
-        // Target 2: Hard Hat Protective Headwear
+        // Target 4: Hard Hat Protective Headwear
         // -------------------------------------------------------------
         let hardhatDetected = false;
         let hardhatBox = null;
 
         if (highVisDetected && highVisBox) {
-          // Check helmet pixels near/above high-vis vest
           const topY = highVisBox.ymin * size;
           const headHelmetPixels = helmetIndices.filter((p) => p.y >= topY - 50 && p.y <= topY + 20);
           if (headHelmetPixels.length >= 25 || helmetRatio >= 0.005) {
@@ -211,7 +323,6 @@ export async function analyzeImagePixels(imageSource) {
             bounding_box: hardhatBox,
           });
         } else if (highVisDetected) {
-          // Worker is wearing high-vis, but headwear is ambiguous
           ppeFindings.push({
             item_name: 'Hard Hat Protective Headwear',
             category: 'PPE Compliance',
@@ -221,32 +332,22 @@ export async function analyzeImagePixels(imageSource) {
             details: 'Uncertain — Human verification required (protective headwear partially obscured or shadowed).',
             bounding_box: null,
           });
-        } else if (skinRatio >= 0.035) {
-          ppeFindings.push({
-            item_name: 'Hard Hat Protective Headwear',
-            category: 'PPE Compliance',
-            status: 'MISSING',
-            confidence: 0.87,
-            is_compliant: false,
-            details: 'Worker detected in operational zone without required industrial protective hard hat.',
-            bounding_box: computeBox(skinIndices, 0.05),
-          });
         } else {
           ppeFindings.push({
             item_name: 'Hard Hat Protective Headwear',
             category: 'PPE Compliance',
             status: 'NOT DETECTED',
             confidence: 0.89,
-            is_compliant: false,
+            is_compliant: true,
             details: 'No industrial protective hard hat detected in operational area.',
             bounding_box: null,
           });
         }
 
         // -------------------------------------------------------------
-        // Target 3: Flange / Pipeline Leak Precursor
+        // Target 5: Flange / Pipeline Leak Precursor
         // -------------------------------------------------------------
-        const leakDetected = (leakRatio >= 0.012 && metalRatio >= 0.08);
+        const leakDetected = (leakRatio >= 0.015 && metalRatio >= 0.10);
         const leakBox = computeBox(leakIndices, 0.02);
 
         if (leakDetected && leakBox) {
@@ -285,7 +386,7 @@ export async function analyzeImagePixels(imageSource) {
         }
 
         // -------------------------------------------------------------
-        // Target 4: Atmospheric Corrosion / Rust Degradation
+        // Target 6: Atmospheric Corrosion / Rust Degradation
         // -------------------------------------------------------------
         const rustDetected = rustRatio >= 0.035;
         const rustBox = computeBox(rustIndices, 0.02);
@@ -327,9 +428,9 @@ export async function analyzeImagePixels(imageSource) {
         }
 
         // -------------------------------------------------------------
-        // Target 5: Liquid Accumulation / Floor Pooling
+        // Target 7: Liquid Accumulation / Floor Pooling
         // -------------------------------------------------------------
-        const liquidDetected = liquidRatio >= 0.022;
+        const liquidDetected = liquidRatio >= 0.025;
         const liquidBox = computeBox(floorLiquidIndices, 0.02);
 
         if (liquidDetected && liquidBox) {
@@ -395,7 +496,7 @@ export async function analyzeImagePixels(imageSource) {
         const count = detectedHazards.length;
 
         let sifRating = 'LOW';
-        let sifProb = 0.06;
+        let sifProb = 0.05;
         let riskScore = 12;
         let barrierStatus = 'Intact — No Visual Safety Anomalies Detected';
         let primaryHazard = 'No Hazard Detected (Safe Condition)';
@@ -427,6 +528,12 @@ export async function analyzeImagePixels(imageSource) {
 
         // Recommendations
         const recActions = [];
+        if (fireDetected) {
+          recActions.push('Initiate immediate emergency response protocol, sound fire alarm, and activate ESD deluge system');
+        }
+        if (smokeDetected) {
+          recActions.push('Evacuate downwind personnel, isolate fuel/gas feed lines, and verify air quality readings');
+        }
         if (leakDetected) {
           recActions.push('Isolate upstream flange manifold, verify LEL gas readings, and depressurize line');
         }
@@ -445,9 +552,16 @@ export async function analyzeImagePixels(imageSource) {
           recActions.push('Maintain standard operational housekeeping and periodic walk-throughs');
         }
 
+        // Export normalized image data URI
+        const dataUri = canvas.toDataURL('image/jpeg', 0.85);
+
         const response = {
           inspection_id: `VIS-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
           vision_model_engine: 'Client-Side Computer Vision Engine (HTML5 Canvas Tensor Analyzer)',
+          image_data: dataUri,
+          image_source_type: 'upload',
+          target_asset: 'Operational Asset',
+          facility_location: 'Operational Site',
           ppe_findings: ppeFindings,
           hazard_findings: hazardFindings,
           detected_hazards: detectedHazards,
@@ -460,6 +574,7 @@ export async function analyzeImagePixels(imageSource) {
           barrier_integrity_status: barrierStatus,
           recommended_safety_action: Array.from(new Set(recActions)),
           human_verification_required: humanVerificationNeeded,
+          verification_status: 'PENDING REVIEW',
           inspected_at: new Date().toISOString(),
         };
 

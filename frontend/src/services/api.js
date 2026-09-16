@@ -558,6 +558,12 @@ export const api = {
           method: 'POST',
           body: payloadOrFormData,
         });
+      } else if (payloadOrFormData?.image_url) {
+        res = await fetch(`${API_BASE}/vision/analyze-url`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payloadOrFormData),
+        });
       } else {
         res = await fetch(`${API_BASE}/vision/inspect`, {
           method: 'POST',
@@ -567,7 +573,7 @@ export const api = {
       }
       return await handleResponse(res);
     } catch (err) {
-      console.warn('Backend API unavailable, executing client-side computer vision pixel analyzer:', err.message);
+      console.warn('Backend API unavailable or error, executing client-side computer vision pixel analyzer:', err.message);
 
       let imageSource = null;
       if (payloadOrFormData instanceof FormData) {
@@ -587,6 +593,10 @@ export const api = {
       return {
         inspection_id: 'VIS-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
         vision_model_engine: 'Client-Side Safety Analyzer',
+        image_data: null,
+        image_url: null,
+        target_asset: 'Operational Asset',
+        facility_location: 'Operational Site',
         ppe_findings: [],
         hazard_findings: [],
         detected_hazards: [],
@@ -599,8 +609,67 @@ export const api = {
         barrier_integrity_status: 'Unverified — Insufficient Visual Evidence',
         recommended_safety_action: ['Provide a clear, illuminated JPG/PNG image of the equipment or work area for AI inspection.'],
         human_verification_required: true,
+        verification_status: 'REQUIRES REVIEW',
         inspected_at: new Date().toISOString()
       };
+    }
+  },
+
+  saveVisionInspection: async (payload) => {
+    try {
+      const res = await fetch(`${API_BASE}/vision/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      return await handleResponse(res);
+    } catch (err) {
+      console.warn('Backend save failed, recording locally:', err.message);
+      // Save to localStorage as backup
+      const localKey = 'oil_sif_vision_history';
+      const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
+      const newRecord = {
+        id: Date.now(),
+        ...payload,
+        created_at: new Date().toISOString(),
+        inspected_at: payload.inspected_at || new Date().toISOString()
+      };
+      existing.unshift(newRecord);
+      localStorage.setItem(localKey, JSON.stringify(existing));
+      return {
+        success: true,
+        inspection_id: payload.inspection_id,
+        record_id: newRecord.id,
+        message: 'Inspection verified and saved locally.',
+        saved_at: new Date().toISOString()
+      };
+    }
+  },
+
+  getVisionHistory: async (limit = 50, offset = 0) => {
+    try {
+      const res = await fetch(`${API_BASE}/vision/history?limit=${limit}&offset=${offset}`);
+      const data = await handleResponse(res);
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    } catch (err) {
+      console.warn('Backend vision history fetch failed, reading local storage:', err.message);
+    }
+    const localKey = 'oil_sif_vision_history';
+    return JSON.parse(localStorage.getItem(localKey) || '[]');
+  },
+
+  getVisionInspectionById: async (inspectionId) => {
+    try {
+      const res = await fetch(`${API_BASE}/vision/history/${inspectionId}`);
+      return await handleResponse(res);
+    } catch (err) {
+      const localKey = 'oil_sif_vision_history';
+      const list = JSON.parse(localStorage.getItem(localKey) || '[]');
+      const found = list.find(r => r.inspection_id === inspectionId);
+      if (found) return found;
+      throw err;
     }
   },
 

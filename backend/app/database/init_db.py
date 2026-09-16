@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy import inspect, text
 from app.database.database import engine, Base
-from app.database.models import SafetyReport, Feedback, CorrectiveAction, SafetyAlert, AIDecisionAudit, Asset, AnalysisHistory
+from app.database.models import SafetyReport, Feedback, CorrectiveAction, SafetyAlert, AIDecisionAudit, Asset, AnalysisHistory, VisionInspectionRecord
 
 logger = logging.getLogger("OIL-SIF-AI.init_db")
 
