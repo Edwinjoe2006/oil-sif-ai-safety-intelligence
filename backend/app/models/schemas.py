@@ -211,9 +211,42 @@ class VisionInspectionResponse(BaseModel):
     sif_risk_rating: str  # CRITICAL, HIGH, MEDIUM, LOW
     sif_probability: float
     overall_confidence: float
+    hazard_domain: Optional[str] = "General Safety"
+    risk_score: Optional[int] = 50
     barrier_integrity_status: str
     recommended_safety_action: List[str]
     inspected_at: datetime
+
+
+# --- PDF Safety Report Analysis ---
+
+class PdfAnalysisFinding(BaseModel):
+    finding: str
+    source_page: int
+    evidence_sentence: str
+    hazard: str
+    severity: str
+
+
+class PdfAnalysisResponse(BaseModel):
+    id: Optional[int] = None
+    filename: str
+    total_pages: int
+    sif_precursor: bool
+    sif_probability: float
+    hazard_category: str
+    hazard_probability: float
+    severity: str
+    severity_probability: float
+    risk_score: int
+    risk_level: str
+    key_findings: List[PdfAnalysisFinding]
+    why_this_score: List[str]
+    potential_consequences: List[str]
+    recommended_action: List[str]
+    escalation_path: List[Dict[str, Any]]
+    copilot_narrative: Optional[str] = None
+    created_at: datetime
 
 
 # --- Feature 4: What-If Risk Simulator ---

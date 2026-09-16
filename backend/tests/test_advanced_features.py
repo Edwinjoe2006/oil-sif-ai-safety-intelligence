@@ -65,10 +65,21 @@ def test_feature2_asset_intelligence():
     assert "uptime_safety_index" in profile
 
 def test_feature3_vision_inspection():
+    import io, base64
+    from PIL import Image, ImageDraw
+
+    # Generate a real test image with corrosion iron-oxide rust
+    img = Image.new("RGB", (200, 200), color=(90, 95, 100))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([40, 40, 160, 160], fill=(185, 75, 22))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+
     payload = {
-        "image_url": "https://example.com/platform_flange.jpg",
+        "image_base64": b64,
         "location": "Drilling Rig Alpha",
-        "context_notes": "High pressure flange leak and missing helmet"
+        "context_notes": "High pressure flange leak and corrosion inspection"
     }
     response = client.post("/api/vision/inspect", json=payload)
     assert response.status_code == 200
@@ -76,6 +87,45 @@ def test_feature3_vision_inspection():
     assert "inspection_id" in data
     assert len(data["detected_hazards"]) >= 1
     assert data["sif_risk_rating"] in ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+    assert data["risk_score"] > 0
+
+    # Also test upload endpoint
+    res_upload = client.post(
+        "/api/vision/upload",
+        files={"file": ("test.png", buf.getvalue(), "image/png")},
+        data={"context_notes": "Inspection on Rig 1"}
+    )
+    assert res_upload.status_code == 200
+    assert res_upload.json()["inspection_id"].startswith("VIS-")
+
+
+def test_pdf_report_analysis():
+    import io
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=letter)
+    c.setFont("Helvetica", 12)
+    c.drawString(50, 750, "OFFSHORE PLATFORM SAFETY AUDIT REPORT")
+    c.drawString(50, 720, "Observation: Hydrocarbon gas leak detected near separator line at 1200 PSI.")
+    c.drawString(50, 690, "PSV safety relief valve inspection overdue by 30 days.")
+    c.showPage()
+    c.save()
+
+    response = client.post(
+        "/api/analyze/pdf",
+        files={"file": ("audit.pdf", buf.getvalue(), "application/pdf")},
+        data={"location": "Offshore Platform Delta"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "id" in data
+    assert data["total_pages"] == 1
+    assert len(data["key_findings"]) >= 1
+    assert data["key_findings"][0]["source_page"] == 1
+    assert data["risk_score"] > 0
+
 
 def test_feature4_whatif_simulator():
     payload = {

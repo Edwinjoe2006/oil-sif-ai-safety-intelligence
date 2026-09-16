@@ -1,11 +1,13 @@
 import logging
 import time
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.database.models import SafetyReport, CorrectiveAction, Asset
 from app.models.schemas import (
-    AnalyzeRequest, AnalyzeResponse, CopilotExplanation, SimilarReportItem, BowTieDiagram
+    AnalyzeRequest, AnalyzeResponse, CopilotExplanation, SimilarReportItem, BowTieDiagram,
+    PdfAnalysisResponse, PdfAnalysisFinding
 )
 from app.services.prediction_service import prediction_service, ModelsNotTrainedException
 from app.services.risk_engine import risk_engine
@@ -16,6 +18,7 @@ from app.services.bowtie_service import bowtie_service
 from app.services.copilot_service import copilot_service
 from app.services.audit_service import audit_service
 from app.services.alert_action_service import alert_action_service
+from app.services.pdf_service import pdf_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analyze", tags=["Analyze"])
@@ -170,5 +173,103 @@ def analyze_report(payload: AnalyzeRequest, db: Session = Depends(get_db)):
         copilot=CopilotExplanation(**copilot_data),
         bow_tie=BowTieDiagram(**bowtie_data),
         asset=report_record.asset,
+        created_at=report_record.created_at
+    )
+
+
+@router.post("/pdf", response_model=PdfAnalysisResponse, status_code=status.HTTP_200_OK)
+async def analyze_pdf_report(
+    file: UploadFile = File(...),
+    location: Optional[str] = Form("Operational Site"),
+    asset: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Extracts text page-by-page from an uploaded PDF safety/inspection report,
+    extracts traceable findings with source page citations, evaluates SIF potential
+    and risk score, persists to DB, and creates actionable alerts.
+    """
+    start_time = time.time()
+    try:
+        pdf_bytes = await file.read()
+        res = pdf_service.analyze_pdf(pdf_bytes, filename=file.filename or "safety_report.pdf")
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"PDF Analysis error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"PDF extraction error: {str(e)}")
+
+    # Persist report to database
+    report_record = SafetyReport(
+        report_text=f"[PDF Report: {res['filename']} ({res['total_pages']} pages)]\n" + "\n".join(
+            f"• [Page {f['source_page']}] {f['finding']}: {f['evidence_sentence']}" for f in res["key_findings"]
+        ),
+        report_type="Inspection Report (PDF)",
+        location=location or "Operational Site",
+        asset=asset,
+        sif_prediction=res["sif_precursor"],
+        sif_probability=res["sif_probability"],
+        hazard_category=res["hazard_category"],
+        hazard_probability=res["hazard_probability"],
+        severity=res["severity"],
+        severity_probability=res["severity_probability"],
+        risk_score=res["risk_score"],
+        risk_level=res["risk_level"],
+        detected_factors=[f"{f['hazard']} (Page {f['source_page']})" for f in res["key_findings"]],
+        potential_consequences=res["potential_consequences"],
+        recommended_action=res["recommended_action"],
+        escalation_path=res["escalation_path"],
+        status="Open"
+    )
+    db.add(report_record)
+    db.commit()
+    db.refresh(report_record)
+
+    # Save actionable tasks into 5-stage CAPA
+    for idx, action_item in enumerate(res["recommended_action"][:3]):
+        action_row = CorrectiveAction(
+            report_id=report_record.id,
+            action_text=action_item,
+            priority="CRITICAL" if res["risk_score"] >= 75 else ("HIGH" if idx == 0 else "MEDIUM"),
+            responsible_person="Duty Safety Officer",
+            department="HSE",
+            status="OPEN",
+            is_completed=False,
+            assigned_to="Duty Safety Officer"
+        )
+        db.add(action_row)
+    db.commit()
+
+    # Create Safety Alert if high risk
+    alert_action_service.create_alert_if_high_risk(db, report_record)
+
+    # Log audit trace
+    latency_ms = round((time.time() - start_time) * 1000.0, 2)
+    audit_service.log_inference_trace(
+        db=db,
+        report_id=report_record.id,
+        sif_decision=res["sif_precursor"],
+        sif_confidence=res["sif_probability"],
+        latency_ms=latency_ms
+    )
+
+    return PdfAnalysisResponse(
+        id=report_record.id,
+        filename=res["filename"],
+        total_pages=res["total_pages"],
+        sif_precursor=res["sif_precursor"],
+        sif_probability=res["sif_probability"],
+        hazard_category=res["hazard_category"],
+        hazard_probability=res["hazard_probability"],
+        severity=res["severity"],
+        severity_probability=res["severity_probability"],
+        risk_score=res["risk_score"],
+        risk_level=res["risk_level"],
+        key_findings=[PdfAnalysisFinding(**f) for f in res["key_findings"]],
+        why_this_score=res["why_this_score"],
+        potential_consequences=res["potential_consequences"],
+        recommended_action=res["recommended_action"],
+        escalation_path=res["escalation_path"],
+        copilot_narrative=res["copilot_narrative"],
         created_at=report_record.created_at
     )

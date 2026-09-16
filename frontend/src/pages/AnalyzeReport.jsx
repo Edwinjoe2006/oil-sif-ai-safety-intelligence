@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   ShieldAlert,
   Sparkles,
@@ -18,7 +18,11 @@ import {
   HelpCircle,
   AlertTriangle,
   Info,
-  CheckSquare
+  CheckSquare,
+  FileText,
+  Upload,
+  BookOpen,
+  FileCheck
 } from 'lucide-react';
 import { api } from '../services/api';
 import RiskScoreGauge from '../components/RiskScoreGauge';
@@ -94,11 +98,12 @@ const ASSET_OPTIONS = [
 ];
 
 export default function AnalyzeReport({ onNavigateToReport }) {
+  const [inputMode, setInputMode] = useState('pdf'); // 'pdf' or 'text'
+  const [pdfFile, setPdfFile] = useState(null);
   const [reportText, setReportText] = useState('');
   const [reportType, setReportType] = useState('Unsafe Condition');
   const [location, setLocation] = useState('Offshore Platform Delta - Wellhead Manifold');
   const [asset, setAsset] = useState('Flare Header 04');
-  const [imageUrl, setImageUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
   const [result, setResult] = useState(null);
@@ -106,7 +111,34 @@ export default function AnalyzeReport({ onNavigateToReport }) {
   const [completedActions, setCompletedActions] = useState({});
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
 
+  const pdfInputRef = useRef(null);
+
+  const handlePdfFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+      alert('Please select a valid PDF document.');
+      return;
+    }
+
+    setPdfFile(file);
+    setResult(null);
+    setError(null);
+  };
+
+  const handlePdfDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf')) {
+      setPdfFile(file);
+      setResult(null);
+      setError(null);
+    }
+  };
+
   const handleUseScenario = (sc) => {
+    setInputMode('text');
     setReportText(sc.text);
     setReportType(sc.type);
     setLocation(sc.location);
@@ -116,8 +148,16 @@ export default function AnalyzeReport({ onNavigateToReport }) {
   };
 
   const handleAnalyze = async (e) => {
-    e.preventDefault();
-    if (!reportText.trim()) return;
+    if (e) e.preventDefault();
+
+    if (inputMode === 'pdf' && !pdfFile) {
+      alert('Please upload a PDF safety report first.');
+      return;
+    }
+    if (inputMode === 'text' && !reportText.trim()) {
+      alert('Please enter a safety report observation.');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -129,13 +169,21 @@ export default function AnalyzeReport({ onNavigateToReport }) {
       const stepTimer2 = setTimeout(() => setAnalysisStep(3), 500);
       const stepTimer3 = setTimeout(() => setAnalysisStep(4), 750);
 
-      const response = await api.analyzeReport({
-        report_text: reportText,
-        report_type: reportType,
-        location: location,
-        asset: asset || undefined,
-        image_url: imageUrl || undefined,
-      });
+      let response;
+      if (inputMode === 'pdf') {
+        const formData = new FormData();
+        formData.append('file', pdfFile);
+        formData.append('location', location);
+        if (asset) formData.append('asset', asset);
+        response = await api.analyzePdfReport(formData);
+      } else {
+        response = await api.analyzeReport({
+          report_text: reportText,
+          report_type: reportType,
+          location: location,
+          asset: asset || undefined,
+        });
+      }
 
       clearTimeout(stepTimer1);
       clearTimeout(stepTimer2);
@@ -145,7 +193,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
       setCompletedActions({});
     } catch (err) {
       console.error('Analysis failed:', err);
-      setError(err.message || 'Failed to complete AI safety analysis. Check database connectivity.');
+      setError(err.message || 'Failed to complete AI safety analysis. Please check file format.');
     } finally {
       setLoading(false);
       setAnalysisStep(0);
@@ -159,7 +207,6 @@ export default function AnalyzeReport({ onNavigateToReport }) {
     }));
   };
 
-  // Helper for score meaning
   const getRiskScoreMeaning = (score) => {
     if (score >= 75) return { tier: 'CRITICAL', label: 'Immediate safety attention required', desc: 'Active high-potential precursor with compromised barriers.' };
     if (score >= 50) return { tier: 'HIGH', label: 'Priority investigation recommended', desc: 'Significant hazard severity with potential for escalation.' };
@@ -172,155 +219,235 @@ export default function AnalyzeReport({ onNavigateToReport }) {
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#38BDF8', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-          <Zap size={14} /> AI Precursor Intelligence Pipeline
+          <Zap size={14} /> AI Safety Report Analysis
         </div>
         <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#FFFFFF', letterSpacing: '-0.02em' }}>
           Analyze Safety Report
         </h2>
         <p style={{ fontSize: '0.9rem', color: '#94A3B8', marginTop: '0.25rem' }}>
-          Identify potential Serious Injury & Fatality (SIF) precursors, quantify risk, and discover root-cause factors using multi-task AI.
+          Upload PDF inspection reports or enter safety observations to extract traceable findings, calculate risk, and identify SIF precursors.
         </p>
       </div>
 
-      {/* Quick Demo Scenarios */}
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', marginBottom: '0.75rem' }}>
-          Quick Demo Scenarios (Click to Auto-Fill Form)
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-          {DEMO_SCENARIOS.map((sc) => (
-            <div
-              key={sc.id}
-              className="glass-card glass-card-interactive"
-              onClick={() => handleUseScenario(sc)}
-              style={{
-                padding: '1.15rem',
-                borderLeft: `4px solid ${sc.color}`,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                cursor: 'pointer'
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                  <span style={{ fontSize: '0.7rem', fontWeight: '800', color: sc.color, textTransform: 'uppercase' }}>
-                    {sc.tag}
-                  </span>
-                </div>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: '700', color: '#F8FAFC', marginBottom: '0.35rem' }}>
-                  {sc.title}
-                </h4>
-                <p style={{ fontSize: '0.75rem', color: '#94A3B8', lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                  {sc.text}
-                </p>
-              </div>
-              <div style={{ marginTop: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: '#38BDF8', fontWeight: '600' }}>
-                <span>Use Scenario</span>
-                <ArrowRight size={12} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Input Panel */}
+      {/* Input Mode Switcher & Panel */}
       <div className="glass-card" style={{ padding: '2rem', marginBottom: '2.5rem' }}>
-        <form onSubmit={handleAnalyze} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94A3B8', marginBottom: '0.4rem' }}>
-                Report Classification Type
-              </label>
-              <select
-                className="form-select"
-                value={reportType}
-                onChange={(e) => setReportType(e.target.value)}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#FFFFFF' }}>Input Method:</span>
+            <div style={{ display: 'flex', background: '#0B132B', padding: '3px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <button
+                type="button"
+                onClick={() => { setInputMode('pdf'); setResult(null); setError(null); }}
+                style={{
+                  background: inputMode === 'pdf' ? '#0284C7' : 'transparent',
+                  color: inputMode === 'pdf' ? '#FFFFFF' : '#94A3B8',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.35rem 0.85rem',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}
               >
-                <option value="Unsafe Condition">Unsafe Condition</option>
-                <option value="Unsafe Act">Unsafe Act</option>
-                <option value="Near Miss">Near Miss</option>
-              </select>
+                <FileText size={14} /> PDF Report Upload
+              </button>
+              <button
+                type="button"
+                onClick={() => { setInputMode('text'); setResult(null); setError(null); }}
+                style={{
+                  background: inputMode === 'text' ? '#0284C7' : 'transparent',
+                  color: inputMode === 'text' ? '#FFFFFF' : '#94A3B8',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.35rem 0.85rem',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}
+              >
+                <FileCheck size={14} /> Text / Scenarios
+              </button>
             </div>
+          </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94A3B8', marginBottom: '0.4rem' }}>
-                Operational Facility / Location
-              </label>
-              <input
-                type="text"
-                className="form-input"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Offshore Platform Delta, Wellhead Manifold..."
-                required
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38BDF8', marginBottom: '0.4rem' }}>
-                Target Asset / Equipment (Feature 2)
-              </label>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ minWidth: '180px' }}>
               <select
                 className="form-select"
                 value={asset}
                 onChange={(e) => setAsset(e.target.value)}
+                style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', height: '36px' }}
               >
                 {ASSET_OPTIONS.map((opt, i) => (
                   <option key={i} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </div>
+            <div style={{ minWidth: '180px' }}>
+              <input
+                type="text"
+                className="form-input"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Operational Site..."
+                style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', height: '36px' }}
+              />
+            </div>
           </div>
+        </div>
 
+        {/* WORKFLOW 1: PDF UPLOAD */}
+        {inputMode === 'pdf' && (
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94A3B8' }}>
-                Safety Observation / Incident Narrative
-              </label>
-              <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                {reportText.length} characters
+            <input
+              type="file"
+              ref={pdfInputRef}
+              accept="application/pdf,.pdf"
+              onChange={handlePdfFileSelect}
+              style={{ display: 'none' }}
+            />
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handlePdfDrop}
+              onClick={() => pdfInputRef.current?.click()}
+              style={{
+                border: '2px dashed rgba(56, 189, 248, 0.45)',
+                borderRadius: '12px',
+                padding: '2.5rem 1.5rem',
+                textAlign: 'center',
+                background: 'rgba(56, 189, 248, 0.04)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                marginBottom: '1.5rem',
+              }}
+            >
+              <FileText size={42} color="#38BDF8" style={{ margin: '0 auto 0.75rem' }} />
+              <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#FFFFFF', marginBottom: '0.35rem' }}>
+                📄 Upload Safety Report PDF
+              </div>
+              <p style={{ fontSize: '0.85rem', color: '#94A3B8', margin: '0 0 1rem' }}>
+                Drag & drop safety/inspection PDF here or <strong style={{ color: '#38BDF8' }}>click to browse</strong>
+              </p>
+              <span style={{ fontSize: '0.72rem', padding: '0.3rem 0.8rem', borderRadius: '6px', background: 'rgba(255,255,255,0.06)', color: '#CBD5E1' }}>
+                Supported: Standard & Multi-Page PDF Safety Audits
               </span>
             </div>
-            <textarea
-              className="form-textarea"
-              rows={4}
-              value={reportText}
-              onChange={(e) => setReportText(e.target.value)}
-              placeholder="Describe the unsafe act, unsafe condition, or near-miss observation in detail (include operating pressure, elevation, permits, gas testing, equipment involved)..."
-              required
-              minLength={5}
-            />
-          </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading || reportText.trim().length < 5}
-              style={{ minWidth: '220px', padding: '0.85rem 1.5rem' }}
-            >
-              {loading ? (
-                <span>Executing AI Pipeline...</span>
-              ) : (
-                <>
-                  <ShieldAlert size={18} />
-                  <span>Analyze Safety Report</span>
-                </>
-              )}
-            </button>
+            {/* Selected PDF Summary Card */}
+            {pdfFile && (
+              <div style={{ padding: '1rem 1.25rem', borderRadius: '8px', background: '#070D1E', border: '1px solid rgba(56, 189, 248, 0.3)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(56, 189, 248, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38BDF8' }}>
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#FFFFFF' }}>
+                      Filename: {pdfFile.name}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                      Size: {Math.round(pdfFile.size / 1024)} KB • Status: <strong style={{ color: '#10B981' }}>✓ Report Ready for Analysis</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAnalyze}
+                  disabled={loading}
+                  className="btn btn-primary"
+                  style={{ padding: '0.75rem 1.5rem', fontSize: '0.9rem' }}
+                >
+                  {loading ? 'Extracting & Analyzing PDF...' : 'Analyze Safety Report PDF'}
+                </button>
+              </div>
+            )}
           </div>
-        </form>
+        )}
+
+        {/* WORKFLOW 2: MANUAL TEXT & DEMO SCENARIOS */}
+        {inputMode === 'text' && (
+          <div>
+            {/* Quick Demo Scenarios */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', marginBottom: '0.65rem' }}>
+                Quick Demo Scenarios (Click to Auto-Fill)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                {DEMO_SCENARIOS.map((sc) => (
+                  <div
+                    key={sc.id}
+                    className="glass-card glass-card-interactive"
+                    onClick={() => handleUseScenario(sc)}
+                    style={{
+                      padding: '0.85rem',
+                      borderLeft: `4px solid ${sc.color}`,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.68rem', fontWeight: '800', color: sc.color, textTransform: 'uppercase' }}>
+                      {sc.tag}
+                    </span>
+                    <h5 style={{ fontSize: '0.85rem', fontWeight: '700', color: '#F8FAFC', margin: '0.2rem 0' }}>
+                      {sc.title}
+                    </h5>
+                    <p style={{ fontSize: '0.72rem', color: '#94A3B8', lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0 }}>
+                      {sc.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <form onSubmit={handleAnalyze} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94A3B8' }}>
+                    Safety Observation / Incident Narrative
+                  </label>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                    {reportText.length} characters
+                  </span>
+                </div>
+                <textarea
+                  className="form-textarea"
+                  rows={4}
+                  value={reportText}
+                  onChange={(e) => setReportText(e.target.value)}
+                  placeholder="Describe the unsafe condition, near-miss, pressure level, gas testing, or failed barrier in detail..."
+                  required
+                  minLength={5}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading || reportText.trim().length < 5}
+                  style={{ minWidth: '220px', padding: '0.85rem 1.5rem' }}
+                >
+                  {loading ? 'Executing AI Pipeline...' : 'Analyze Safety Report'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Loading Multi-Step Animation */}
         {loading && (
-          <div style={{ marginTop: '2rem', padding: '1.5rem', background: '#0B132B', borderRadius: '10px', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#38BDF8', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Sparkles size={16} /> Executing Safety Intelligence Pipeline:
+          <div style={{ marginTop: '1.5rem', padding: '1.25rem', background: '#0B132B', borderRadius: '10px', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
+            <div style={{ fontSize: '0.825rem', fontWeight: '700', color: '#38BDF8', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Sparkles size={15} /> Executing Safety Intelligence Pipeline:
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
               {[
-                'NLP Feature Extraction',
+                inputMode === 'pdf' ? 'Extracting PDF Pages' : 'NLP Feature Extraction',
                 'Hazard Domain Classifier',
                 'SIF Precursor Assessment',
                 'Risk Engine Calculation',
@@ -332,7 +459,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                   <div
                     key={i}
                     style={{
-                      padding: '0.65rem 0.85rem',
+                      padding: '0.6rem 0.8rem',
                       borderRadius: '8px',
                       background: isDone ? 'rgba(16, 185, 129, 0.12)' : (isCurrent ? 'rgba(56, 189, 248, 0.15)' : '#070D1E'),
                       border: isDone ? '1px solid rgba(16, 185, 129, 0.3)' : (isCurrent ? '1px solid #38BDF8' : '1px solid rgba(255,255,255,0.05)'),
@@ -359,15 +486,15 @@ export default function AnalyzeReport({ onNavigateToReport }) {
         <ErrorState
           title="Analysis Unsuccessful"
           message={error}
-          onRetry={() => handleAnalyze({ preventDefault: () => {} })}
+          onRetry={() => handleAnalyze()}
         />
       )}
 
-      {/* 7-Tier Structured Analysis Result */}
+      {/* Analysis Result Dashboard */}
       {result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
-          {/* SECTION 1: What happened & what did AI detect? */}
+          {/* SECTION 1: Top Result Summary */}
           <div
             className="glass-card"
             style={{
@@ -376,14 +503,21 @@ export default function AnalyzeReport({ onNavigateToReport }) {
               border: '1px solid rgba(56, 189, 248, 0.3)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
-              <Zap size={18} color="#38BDF8" />
-              <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
-                1. What Happened & What Did AI Detect?
-              </h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Zap size={18} color="#38BDF8" />
+                <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
+                  AI Safety Report Analysis Result
+                </h3>
+              </div>
+              {result.total_pages && (
+                <span style={{ fontSize: '0.75rem', color: '#38BDF8', fontWeight: '700', background: 'rgba(56, 189, 248, 0.1)', padding: '0.3rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
+                  📄 {result.filename} ({result.total_pages} Pages)
+                </span>
+              )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
               {/* SIF Detection */}
               <div
                 style={{
@@ -394,240 +528,167 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                 }}
               >
                 <div style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', color: result.sif_precursor ? '#F87171' : '#34D399' }}>
-                  SIF PRECURSOR DETECTED
+                  SIF PRECURSOR
                 </div>
                 <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#FFFFFF', marginTop: '0.35rem' }}>
-                  {result.sif_precursor ? 'YES — SIF RISK' : 'NO SIF PRECURSOR'}
+                  {result.sif_precursor ? '⚠️ DETECTED' : 'NOT DETECTED'}
                 </div>
-                <div style={{ fontSize: '0.825rem', color: '#CBD5E1', marginTop: '0.5rem' }}>
-                  SIF Precursor Probability: <strong style={{ color: '#F8FAFC' }}>{Math.round(result.sif_probability * 100)}%</strong> (AI estimate)
+                <div style={{ fontSize: '0.825rem', color: '#CBD5E1', marginTop: '0.4rem' }}>
+                  SIF Probability: <strong style={{ color: '#F8FAFC' }}>{Math.round(result.sif_probability * 100)}%</strong> (AI estimate)
                 </div>
-                <p style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.4rem', lineHeight: '1.4' }}>
-                  {result.sif_precursor
-                    ? 'Meaning: The report contains patterns associated with potential Serious Injury/Fatality precursor conditions.'
-                    : 'Meaning: The report does not show typical fatal or high-energy precursor signatures.'}
-                </p>
               </div>
 
-              {/* Hazard Domain */}
+              {/* Risk Score */}
               <div style={{ padding: '1.5rem', borderRadius: '12px', background: '#0B132B', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <div style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#38BDF8' }}>
-                  PRIMARY HAZARD DOMAIN
+                  RISK SCORE
                 </div>
-                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#FFFFFF', marginTop: '0.35rem' }}>
-                  {result.hazard_category}
+                <div style={{ fontSize: '2rem', fontWeight: '900', color: result.risk_score >= 75 ? '#EF4444' : result.risk_score >= 50 ? '#F97316' : '#10B981', marginTop: '0.1rem' }}>
+                  {result.risk_score} <span style={{ fontSize: '1rem', color: '#64748B' }}>/ 100</span>
                 </div>
-                <div style={{ fontSize: '0.825rem', color: '#94A3B8', marginTop: '0.5rem' }}>
-                  AI Confidence: <strong style={{ color: '#F8FAFC' }}>{Math.round(result.hazard_probability * 100)}%</strong>
+                <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '0.2rem' }}>
+                  Risk Level: <strong style={{ color: '#FFFFFF' }}>{result.risk_level}</strong>
                 </div>
-                <p style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.4rem', lineHeight: '1.4' }}>
-                  Categorized in accordance with OSHA 1910 and API RP 75 oilfield risk domains.
-                </p>
               </div>
 
-              {/* Severity Assessment */}
+              {/* Primary Hazard */}
               <div style={{ padding: '1.5rem', borderRadius: '12px', background: '#0B132B', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <div style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#F59E0B' }}>
-                  SEVERITY ASSESSMENT
+                  PRIMARY HAZARD
                 </div>
-                <div style={{ marginTop: '0.5rem' }}>
-                  <SeverityBadge severity={result.severity} />
+                <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#FFFFFF', marginTop: '0.35rem' }}>
+                  {result.hazard_category}
                 </div>
-                <p style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.85rem', lineHeight: '1.4' }}>
-                  Estimated consequence tier based on stored facility hazard matrix.
-                </p>
+                <div style={{ fontSize: '0.78rem', color: '#94A3B8', marginTop: '0.4rem' }}>
+                  Severity: <strong style={{ color: '#F1F5F9' }}>{result.severity}</strong>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* SECTION 2: Why is it dangerous? */}
-          <div className="glass-card" style={{ padding: '1.75rem', borderLeft: '5px solid #F97316' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.5rem' }}>
-              2. Why Is It Dangerous?
-            </h3>
-            <p style={{ fontSize: '0.9rem', color: '#E2E8F0', lineHeight: 1.6 }}>
-              {result.copilot?.why_dangerous || 
-                `This safety observation involves ${result.hazard_category} with potential for energy release or barrier degradation. Immediate exposure of personnel or equipment without validated safety controls increases vulnerability.`}
-            </p>
-          </div>
-
-          {/* SECTION 3: How serious is it? (With "Why this score?" and Technical Details) */}
-          {(() => {
-            const meaning = getRiskScoreMeaning(result.risk_score);
-            return (
-              <div className="glass-card" style={{ padding: '2rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <ShieldAlert size={18} color="#38BDF8" />
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
-                      3. How Serious Is It? (Risk Score: 0–100)
-                    </h3>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-                    style={{
-                      background: 'rgba(56, 189, 248, 0.1)',
-                      border: '1px solid rgba(56, 189, 248, 0.25)',
-                      borderRadius: '6px',
-                      padding: '0.35rem 0.75rem',
-                      color: '#38BDF8',
-                      cursor: 'pointer',
-                      fontSize: '0.75rem',
-                      fontWeight: '700',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem'
-                    }}
-                  >
-                    {showTechnicalDetails ? 'Hide Calculation Details' : 'View Calculation Details'}
-                    {showTechnicalDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </button>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', alignItems: 'center' }}>
-                  {/* Gauge */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                    <RiskScoreGauge score={result.risk_score} level={result.risk_level} size={180} />
-                  </div>
-
-                  {/* Score Explanation */}
-                  <div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      SCORE INTERPRETATION (0–100 SCALE)
-                    </div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#FFFFFF', marginTop: '0.35rem' }}>
-                      {result.risk_score} / 100 — <span style={{ color: result.risk_score >= 75 ? '#EF4444' : result.risk_score >= 50 ? '#F97316' : '#10B981' }}>{meaning.tier} RISK</span>
-                    </div>
-                    <div style={{ fontSize: '0.85rem', color: '#38BDF8', fontWeight: '700', marginTop: '0.25rem' }}>
-                      Meaning: {meaning.label}
-                    </div>
-                    <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '0.35rem', lineHeight: '1.4' }}>
-                      {meaning.desc}
-                    </p>
-
-                    {/* Why this score breakdown */}
-                    <div style={{ marginTop: '1rem', background: 'rgba(15, 23, 42, 0.6)', padding: '0.85rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#CBD5E1', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-                        Why this score? (Contributing Components)
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.78rem', color: '#94A3B8' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>• SIF Likelihood Weight:</span>
-                          <strong style={{ color: '#F8FAFC' }}>{result.sif_precursor ? 'High (Precursor Present)' : 'Standard'}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>• Assessed Severity Tier:</span>
-                          <strong style={{ color: '#F8FAFC' }}>{result.severity}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>• Domain Hazard Multiplier:</span>
-                          <strong style={{ color: '#F8FAFC' }}>{result.hazard_category}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>• Detected Risk Triggers:</span>
-                          <strong style={{ color: '#F8FAFC' }}>{result.detected_factors?.length || 0} factors</strong>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expandable Technical Details */}
-                {showTechnicalDetails && (
-                  <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', background: '#070D1E', padding: '1rem', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                      Technical Risk Engine Formula Details
-                    </div>
-                    <p style={{ fontSize: '0.78rem', color: '#94A3B8', lineHeight: '1.5' }}>
-                      Formula: <code>Risk_Score = min(100, round((0.40 × SIF_Prob + 0.35 × Severity_Weight + 0.25 × Hazard_Weight) × Factor_Multiplier × 100))</code>
-                    </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginTop: '0.75rem', fontSize: '0.75rem', color: '#CBD5E1' }}>
-                      <div>Raw SIF Probability: <code>{result.sif_probability?.toFixed(4)}</code></div>
-                      <div>Hazard Probability: <code>{result.hazard_probability?.toFixed(4)}</code></div>
-                      <div>Database ID: <code>#{result.id || 'Pending'}</code></div>
-                      <div>Audit Trace: <code>AUD-{result.id || 'N/A'}</code></div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* SECTION 4: Why did the system say this? */}
-          <div className="glass-card" style={{ padding: '1.75rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.5rem' }}>
-              4. Why Did The System Say This? (Contributing Risk Factors)
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '1rem' }}>
-              Specific mechanical, operational, and procedural risk indicators extracted from narrative text:
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {result.detected_factors?.length > 0 ? (
-                result.detected_factors.map((factor, idx) => (
-                  <span key={idx} className="chip">
-                    <AlertOctagon size={13} color="#38BDF8" />
-                    {factor}
-                  </span>
-                ))
-              ) : (
-                <span style={{ color: '#64748B', fontSize: '0.85rem' }}>
-                  No high-risk mechanical or procedural keywords triggered.
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* SECTION 5: What could potentially happen? (Using Potential wording) */}
-          <div className="grid-2">
-            <EscalationPath pathway={result.escalation_path} />
-
+          {/* SECTION 2: Key Findings & Page Traceability */}
+          {result.key_findings && result.key_findings.length > 0 && (
             <div className="glass-card" style={{ padding: '1.75rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.5rem' }}>
-                5. Potential Consequences
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '1.25rem' }}>
-                Potential cascade events if control barriers are degraded (model-based projection):
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <BookOpen size={18} color="#38BDF8" />
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', margin: 0 }}>
+                  Key Findings (Extracted from Report)
+                </h3>
+              </div>
+              <p style={{ fontSize: '0.825rem', color: '#94A3B8', marginBottom: '1.25rem' }}>
+                Every critical safety observation extracted with exact source page traceability:
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {result.potential_consequences?.map((item, idx) => (
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                {result.key_findings.map((finding, idx) => (
                   <div
                     key={idx}
                     style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '0.65rem',
-                      padding: '0.85rem 1rem',
-                      background: '#0B132B',
+                      padding: '1rem 1.25rem',
                       borderRadius: '8px',
-                      borderLeft: '3px solid #F97316',
-                      fontSize: '0.85rem',
-                      color: '#E2E8F0',
+                      background: '#0B132B',
+                      borderLeft: `4px solid ${finding.severity === 'CRITICAL' ? '#EF4444' : finding.severity === 'HIGH' ? '#F97316' : '#38BDF8'}`,
+                      borderTop: '1px solid rgba(255,255,255,0.05)',
+                      borderRight: '1px solid rgba(255,255,255,0.05)',
+                      borderBottom: '1px solid rgba(255,255,255,0.05)',
                     }}
                   >
-                    <Flame size={16} color="#F97316" style={{ flexShrink: 0, marginTop: '2px' }} />
-                    <span>Potential consequence: {item}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: '800', color: '#FFFFFF' }}>
+                        ⚠️ {finding.finding}
+                      </span>
+                      <span style={{ fontSize: '0.72rem', fontWeight: '800', background: 'rgba(56, 189, 248, 0.15)', color: '#38BDF8', padding: '0.2rem 0.6rem', borderRadius: '4px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                        Source: Page {finding.source_page}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.825rem', color: '#CBD5E1', margin: '0 0 0.4rem', lineHeight: '1.4' }}>
+                      "{finding.evidence_sentence}"
+                    </p>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700' }}>
+                      Related Hazard Domain: <strong style={{ color: '#94A3B8' }}>{finding.hazard}</strong>
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
+          )}
+
+          {/* SECTION 3: Why This Score? */}
+          <div className="glass-card" style={{ padding: '1.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ShieldAlert size={18} color="#F97316" />
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', margin: 0 }}>
+                  Why This Score? (Contributing Findings)
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+                style={{
+                  background: 'rgba(56, 189, 248, 0.1)',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  borderRadius: '6px',
+                  padding: '0.35rem 0.75rem',
+                  color: '#38BDF8',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                {showTechnicalDetails ? 'Hide Calculation Details' : 'View Calculation Details'}
+                {showTechnicalDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', color: '#CBD5E1', marginBottom: '0.85rem' }}>
+              Risk score evaluated at <strong>{result.risk_score}/100</strong> because the safety report contains:
+            </p>
+
+            <div style={{ background: '#0B132B', padding: '1rem', borderRadius: '8px', borderLeft: '3px solid #38BDF8', marginBottom: '1rem' }}>
+              <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {result.why_this_score?.map((reason, idx) => (
+                  <li key={idx} style={{ fontSize: '0.85rem', color: '#E2E8F0', lineHeight: 1.4 }}>
+                    {reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Expandable Technical Calculation Details */}
+            {showTechnicalDetails && (
+              <div style={{ padding: '1rem', background: '#070D1E', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', marginTop: '1rem' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                  Risk Engine Weighting & Formulation
+                </div>
+                <p style={{ fontSize: '0.78rem', color: '#94A3B8', lineHeight: 1.5, margin: '0 0 0.5rem' }}>
+                  <code>Risk_Score = min(100, round((0.40 × SIF_Prob + 0.35 × Severity_Weight + 0.25 × Hazard_Weight) × Factor_Multiplier × 100))</code>
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', fontSize: '0.75rem', color: '#CBD5E1' }}>
+                  <div>SIF Probability: <code>{result.sif_probability?.toFixed(4)}</code></div>
+                  <div>Hazard Probability: <code>{result.hazard_probability?.toFixed(4)}</code></div>
+                  <div>Severity Tier: <code>{result.severity}</code></div>
+                  <div>Database ID: <code>#{result.id || 'Stored'}</code></div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* SECTION 6: AI Safety Copilot & Safety Officer Investigation Checklist */}
-          {result.copilot && <CopilotCard copilot={result.copilot} />}
-
-          {/* SECTION 7: What should the safety officer do? */}
+          {/* SECTION 4: Recommended Actions */}
           <div className="glass-card" style={{ padding: '1.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <CheckSquare size={18} color="#10B981" />
               <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', margin: 0 }}>
-                7. What Should The Safety Officer Do?
+                Recommended Actions
               </h3>
             </div>
             <p style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '1.25rem' }}>
-              Specific engineering and administrative controls recommended for {result.hazard_category}:
+              Practical corrective actions synthesized for {result.hazard_category}:
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.85rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '0.85rem' }}>
               {result.recommended_action?.map((action, idx) => {
                 const isChecked = !!completedActions[idx];
                 return (
@@ -677,49 +738,8 @@ export default function AnalyzeReport({ onNavigateToReport }) {
             </div>
           </div>
 
-          {/* Similar Historical Reports */}
-          {result.similar_reports && result.similar_reports.length > 0 && (
-            <div className="glass-card" style={{ padding: '1.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                <div>
-                  <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#F8FAFC' }}>
-                    Similar Stored Historical Reports
-                  </h3>
-                  <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
-                    Matched via TF-IDF cosine similarity against historical database records:
-                  </span>
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                {result.similar_reports.map((sim) => (
-                  <div
-                    key={sim.id}
-                    className="glass-card glass-card-interactive"
-                    onClick={() => onNavigateToReport(sim.id)}
-                    style={{ padding: '1.25rem', background: '#0B132B' }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '700' }}>
-                        Report #{sim.id}
-                      </span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38BDF8' }}>
-                        {sim.similarity_percentage}% Match
-                      </span>
-                    </div>
-                    <div style={{ width: '100%', height: '4px', background: '#1E293B', borderRadius: '2px', marginBottom: '0.75rem', overflow: 'hidden' }}>
-                      <div style={{ width: `${sim.similarity_percentage}%`, height: '100%', background: '#38BDF8' }} />
-                    </div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#F1F5F9' }}>
-                      {sim.hazard}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.25rem' }}>
-                      {sim.location}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* AI Safety Copilot Card */}
+          {result.copilot && <CopilotCard copilot={result.copilot} />}
 
           {/* Human Safety Officer Feedback (Feature 7) */}
           {result.id && <FeedbackModal reportId={result.id} />}
