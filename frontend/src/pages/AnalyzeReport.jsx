@@ -12,7 +12,13 @@ import {
   Bot,
   Zap,
   GitCommit,
-  Camera
+  Camera,
+  ChevronDown,
+  ChevronUp,
+  HelpCircle,
+  AlertTriangle,
+  Info,
+  CheckSquare
 } from 'lucide-react';
 import { api } from '../services/api';
 import RiskScoreGauge from '../components/RiskScoreGauge';
@@ -22,6 +28,7 @@ import EscalationPath from '../components/EscalationPath';
 import CopilotCard from '../components/CopilotCard';
 import FeedbackModal from '../components/FeedbackModal';
 import ErrorState from '../components/ErrorState';
+import InfoTooltip from '../components/InfoTooltip';
 
 const DEMO_SCENARIOS = [
   {
@@ -89,14 +96,15 @@ const ASSET_OPTIONS = [
 export default function AnalyzeReport({ onNavigateToReport }) {
   const [reportText, setReportText] = useState('');
   const [reportType, setReportType] = useState('Unsafe Condition');
-  const [location, setLocation] = useState('Offshore Rig 4 - Deck Area');
-  const [asset, setAsset] = useState('');
+  const [location, setLocation] = useState('Offshore Platform Delta - Wellhead Manifold');
+  const [asset, setAsset] = useState('Flare Header 04');
   const [imageUrl, setImageUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [completedActions, setCompletedActions] = useState({});
+  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
 
   const handleUseScenario = (sc) => {
     setReportText(sc.text);
@@ -137,7 +145,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
       setCompletedActions({});
     } catch (err) {
       console.error('Analysis failed:', err);
-      setError(err.message || 'Failed to complete AI safety analysis');
+      setError(err.message || 'Failed to complete AI safety analysis. Check database connectivity.');
     } finally {
       setLoading(false);
       setAnalysisStep(0);
@@ -151,25 +159,33 @@ export default function AnalyzeReport({ onNavigateToReport }) {
     }));
   };
 
+  // Helper for score meaning
+  const getRiskScoreMeaning = (score) => {
+    if (score >= 75) return { tier: 'CRITICAL', label: 'Immediate safety attention required', desc: 'Active high-potential precursor with compromised barriers.' };
+    if (score >= 50) return { tier: 'HIGH', label: 'Priority investigation recommended', desc: 'Significant hazard severity with potential for escalation.' };
+    if (score >= 25) return { tier: 'MEDIUM', label: 'Safety review recommended', desc: 'Moderate operational risk requiring standard mitigation.' };
+    return { tier: 'LOW', label: 'Routine monitoring', desc: 'Low severity event within normal operational limits.' };
+  };
+
   return (
     <div className="page-wrapper">
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#38BDF8', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-          <Zap size={14} /> Neural Safety Classifier
+          <Zap size={14} /> AI Precursor Intelligence Pipeline
         </div>
         <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#FFFFFF', letterSpacing: '-0.02em' }}>
           Analyze Safety Report
         </h2>
         <p style={{ fontSize: '0.9rem', color: '#94A3B8', marginTop: '0.25rem' }}>
-          Identify Serious Injury & Fatality (SIF) precursors, hazard domains, barrier health, and causal bow-tie pathways using AI.
+          Identify potential Serious Injury & Fatality (SIF) precursors, quantify risk, and discover root-cause factors using multi-task AI.
         </p>
       </div>
 
       {/* Quick Demo Scenarios */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748B', marginBottom: '0.75rem' }}>
-          Quick Demo Scenarios (Click to Populate Form)
+          Quick Demo Scenarios (Click to Auto-Fill Form)
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
           {DEMO_SCENARIOS.map((sc) => (
@@ -183,6 +199,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
+                cursor: 'pointer'
               }}
             >
               <div>
@@ -235,7 +252,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                 className="form-input"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Offshore Platform 2, Wellhead #7..."
+                placeholder="e.g. Offshore Platform Delta, Wellhead Manifold..."
                 required
               />
             </div>
@@ -284,7 +301,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
               style={{ minWidth: '220px', padding: '0.85rem 1.5rem' }}
             >
               {loading ? (
-                <span>Analyzing Pipeline...</span>
+                <span>Executing AI Pipeline...</span>
               ) : (
                 <>
                   <ShieldAlert size={18} />
@@ -346,124 +363,204 @@ export default function AnalyzeReport({ onNavigateToReport }) {
         />
       )}
 
-      {/* Comprehensive Analysis Result */}
+      {/* 7-Tier Structured Analysis Result */}
       {result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {/* Top Result Banner: Gauge + Core Metrics */}
+          
+          {/* SECTION 1: What did AI detect? */}
           <div
             className="glass-card"
             style={{
-              padding: '2.5rem 2rem',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '2rem',
-              alignItems: 'center',
+              padding: '2rem',
               background: 'linear-gradient(145deg, #101B3B 0%, #0B132B 100%)',
               border: '1px solid rgba(56, 189, 248, 0.3)',
             }}
           >
-            {/* 1. Risk Score Gauge */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#94A3B8', marginBottom: '0.75rem' }}>
-                INDEPENDENT RISK INDEX
-              </div>
-              <RiskScoreGauge score={result.risk_score} level={result.risk_level} size={190} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+              <Zap size={18} color="#38BDF8" />
+              <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
+                1. What Did AI Detect?
+              </h3>
             </div>
 
-            {/* 2. SIF Precursor Card */}
-            <div
-              style={{
-                padding: '1.5rem',
-                borderRadius: '12px',
-                background: result.sif_precursor ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-                border: `1px solid ${result.sif_precursor ? 'rgba(239, 68, 68, 0.35)' : 'rgba(16, 185, 129, 0.35)'}`,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: result.sif_precursor ? '#F87171' : '#34D399' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
+              {/* SIF Detection */}
+              <div
+                style={{
+                  padding: '1.5rem',
+                  borderRadius: '12px',
+                  background: result.sif_precursor ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                  border: `1px solid ${result.sif_precursor ? 'rgba(239, 68, 68, 0.35)' : 'rgba(16, 185, 129, 0.35)'}`,
+                }}
+              >
+                <div style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', color: result.sif_precursor ? '#F87171' : '#34D399' }}>
                   SIF PRECURSOR DETECTED
-                </span>
-                <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#FFFFFF', marginTop: '0.35rem' }}>
-                  {result.sif_precursor ? 'YES ? SIF RISK' : 'NO SIF PRECURSOR'}
                 </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#FFFFFF', marginTop: '0.35rem' }}>
+                  {result.sif_precursor ? 'YES — SIF RISK' : 'NO SIF PRECURSOR'}
+                </div>
+                <div style={{ fontSize: '0.825rem', color: '#CBD5E1', marginTop: '0.5rem' }}>
+                  SIF Precursor Probability: <strong style={{ color: '#F8FAFC' }}>{Math.round(result.sif_probability * 100)}%</strong>
+                </div>
+                <p style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.4rem', lineHeight: '1.4' }}>
+                  {result.sif_precursor
+                    ? 'Meaning: The report contains patterns associated with potential Serious Injury/Fatality precursor conditions.'
+                    : 'Meaning: The report does not show typical fatal or high-energy precursor signatures.'}
+                </p>
               </div>
-              <div style={{ marginTop: '1.25rem', fontSize: '0.85rem', color: '#CBD5E1' }}>
-                SIF Model Confidence: <strong style={{ color: '#F8FAFC' }}>{(result.sif_probability * 100).toFixed(1)}%</strong>
-              </div>
-            </div>
 
-            {/* 3. Hazard & Severity Card */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ padding: '1.2rem', borderRadius: '10px', background: '#0B132B', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#38BDF8' }}>
-                  HAZARD DOMAIN
-                </span>
-                <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#FFFFFF', marginTop: '0.2rem' }}>
+              {/* Hazard Domain */}
+              <div style={{ padding: '1.5rem', borderRadius: '12px', background: '#0B132B', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#38BDF8' }}>
+                  PRIMARY HAZARD DOMAIN
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#FFFFFF', marginTop: '0.35rem' }}>
                   {result.hazard_category}
                 </div>
-                <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                  Classification probability: {(result.hazard_probability * 100).toFixed(1)}%
-                </span>
+                <div style={{ fontSize: '0.825rem', color: '#94A3B8', marginTop: '0.5rem' }}>
+                  Model Confidence: <strong style={{ color: '#F8FAFC' }}>{Math.round(result.hazard_probability * 100)}%</strong>
+                </div>
+                <p style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.4rem', lineHeight: '1.4' }}>
+                  Categorized in accordance with OSHA 1910 and API RP 75 oilfield risk domains.
+                </p>
               </div>
 
-              <div style={{ padding: '1.2rem', borderRadius: '10px', background: '#0B132B', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#F59E0B' }}>
+              {/* Severity Assessment */}
+              <div style={{ padding: '1.5rem', borderRadius: '12px', background: '#0B132B', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#F59E0B' }}>
                   SEVERITY ASSESSMENT
-                </span>
-                <div style={{ marginTop: '0.35rem' }}>
+                </div>
+                <div style={{ marginTop: '0.5rem' }}>
                   <SeverityBadge severity={result.severity} />
                 </div>
+                <p style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.85rem', lineHeight: '1.4' }}>
+                  Estimated consequence tier based on stored facility hazard matrix.
+                </p>
               </div>
             </div>
           </div>
 
-          {/* AI Safety Copilot (Feature 6) */}
-          {result.copilot && <CopilotCard copilot={result.copilot} />}
-
-          {/* Causal Bow-Tie Diagram Section (Feature 5) */}
-          {result.bow_tie && (
-            <div className="glass-card" style={{ padding: '1.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <GitCommit size={18} color="#38BDF8" />
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', margin: 0 }}>
-                  Incident Causal Bow-Tie Model
-                </h3>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '1rem', borderRadius: '8px', borderLeft: '3px solid #EF4444' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#EF4444', textTransform: 'uppercase' }}>Threats</div>
-                  <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.2rem', fontSize: '0.8rem', color: '#CBD5E1' }}>
-                    {result.bow_tie.threats?.slice(0, 3).map((t, i) => <li key={i}>{t.label || t}</li>)}
-                  </ul>
-                </div>
-
-                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '1rem', borderRadius: '8px', borderLeft: '3px solid #38BDF8' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase' }}>Prevention Barriers</div>
-                  <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.2rem', fontSize: '0.8rem', color: '#CBD5E1' }}>
-                    {result.bow_tie.prevention_barriers?.slice(0, 3).map((b, i) => <li key={i}>{b.label || b}</li>)}
-                  </ul>
-                </div>
-
-                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '1rem', borderRadius: '8px', borderLeft: '3px solid #10B981' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#10B981', textTransform: 'uppercase' }}>Mitigation Barriers</div>
-                  <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.2rem', fontSize: '0.8rem', color: '#CBD5E1' }}>
-                    {result.bow_tie.mitigation_barriers?.slice(0, 3).map((b, i) => <li key={i}>{b.label || b}</li>)}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Explainable Dangerous Factors */}
-          <div className="glass-card" style={{ padding: '1.75rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.5rem' }}>
-              Explainable Risk Factors Detected From Report
+          {/* SECTION 2: Why is it dangerous? */}
+          <div className="glass-card" style={{ padding: '1.75rem', borderLeft: '5px solid #F97316' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.5rem' }}>
+              2. Why Is It Dangerous?
             </h3>
-            <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '1rem' }}>
-              Safety triggers extracted dynamically by NLP pattern analysis of the observation narrative:
+            <p style={{ fontSize: '0.9rem', color: '#E2E8F0', lineHeight: 1.6 }}>
+              {result.copilot?.why_dangerous || 
+                `This safety observation involves ${result.hazard_category} with potential for energy release or barrier degradation. Immediate exposure of personnel or equipment without validated safety controls increases vulnerability.`}
+            </p>
+          </div>
+
+          {/* SECTION 3: What is the risk? (With "Why this score?" and Technical Details) */}
+          {(() => {
+            const meaning = getRiskScoreMeaning(result.risk_score);
+            return (
+              <div className="glass-card" style={{ padding: '2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <ShieldAlert size={18} color="#38BDF8" />
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
+                      3. What Is The Risk?
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.1)',
+                      border: '1px solid rgba(56, 189, 248, 0.25)',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      color: '#38BDF8',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem'
+                    }}
+                  >
+                    {showTechnicalDetails ? 'Hide Technical Details' : 'View Calculation Details'}
+                    {showTechnicalDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', alignItems: 'center' }}>
+                  {/* Gauge */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <RiskScoreGauge score={result.risk_score} level={result.risk_level} size={180} />
+                  </div>
+
+                  {/* Score Explanation */}
+                  <div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      SCORE INTERPRETATION (0–100 SCALE)
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#FFFFFF', marginTop: '0.35rem' }}>
+                      {result.risk_score} / 100 — <span style={{ color: result.risk_score >= 75 ? '#EF4444' : result.risk_score >= 50 ? '#F97316' : '#10B981' }}>{meaning.tier} RISK</span>
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: '#38BDF8', fontWeight: '700', marginTop: '0.25rem' }}>
+                      Meaning: {meaning.label}
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '0.35rem', lineHeight: '1.4' }}>
+                      {meaning.desc}
+                    </p>
+
+                    {/* Why this score breakdown */}
+                    <div style={{ marginTop: '1rem', background: 'rgba(15, 23, 42, 0.6)', padding: '0.85rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#CBD5E1', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                        Why this score? (Contributing Components)
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.78rem', color: '#94A3B8' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>• SIF Likelihood Weight:</span>
+                          <strong style={{ color: '#F8FAFC' }}>{result.sif_precursor ? 'High (Precursor Present)' : 'Standard'}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>• Assessed Severity Tier:</span>
+                          <strong style={{ color: '#F8FAFC' }}>{result.severity}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>• Domain Hazard Multiplier:</span>
+                          <strong style={{ color: '#F8FAFC' }}>{result.hazard_category}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>• Detected Risk Triggers:</span>
+                          <strong style={{ color: '#F8FAFC' }}>{result.detected_factors?.length || 0} factors</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expandable Technical Details */}
+                {showTechnicalDetails && (
+                  <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', background: '#070D1E', padding: '1rem', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                      Technical Risk Engine Formula Details
+                    </div>
+                    <p style={{ fontSize: '0.78rem', color: '#94A3B8', lineHeight: '1.5' }}>
+                      Formula: <code>Risk_Score = min(100, round((0.40 × SIF_Prob + 0.35 × Severity_Weight + 0.25 × Hazard_Weight) × Factor_Multiplier × 100))</code>
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginTop: '0.75rem', fontSize: '0.75rem', color: '#CBD5E1' }}>
+                      <div>Raw SIF Probability: <code>{result.sif_probability?.toFixed(4)}</code></div>
+                      <div>Hazard Probability: <code>{result.hazard_probability?.toFixed(4)}</code></div>
+                      <div>Database ID: <code>#{result.id || 'Pending'}</code></div>
+                      <div>Audit Trace: <code>AUD-{result.id || 'N/A'}</code></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* SECTION 4: What factors caused the risk? */}
+          <div className="glass-card" style={{ padding: '1.75rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.5rem' }}>
+              4. What Factors Caused The Risk?
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '1rem' }}>
+              Specific mechanical, operational, and procedural risk indicators extracted from narrative text:
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
               {result.detected_factors?.length > 0 ? (
@@ -481,16 +578,16 @@ export default function AnalyzeReport({ onNavigateToReport }) {
             </div>
           </div>
 
-          {/* Potential Incident Escalation Path & Potential Consequences */}
+          {/* SECTION 5: What could potentially happen? (Using Potential wording) */}
           <div className="grid-2">
             <EscalationPath pathway={result.escalation_path} />
 
             <div className="glass-card" style={{ padding: '1.75rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.5rem' }}>
-                Potential Consequences
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.5rem' }}>
+                5. Potential Consequences
               </h3>
               <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '1.25rem' }}>
-                Hazard-specific primary and cascade incident consequences:
+                Potential cascade events if control barriers are degraded (model-based projection):
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {result.potential_consequences?.map((item, idx) => (
@@ -509,20 +606,26 @@ export default function AnalyzeReport({ onNavigateToReport }) {
                     }}
                   >
                     <Flame size={16} color="#F97316" style={{ flexShrink: 0, marginTop: '2px' }} />
-                    <span>{item}</span>
+                    <span>Potential consequence: {item}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Recommended Corrective Actions */}
+          {/* SECTION 6: AI Safety Copilot & Safety Officer Investigation Checklist */}
+          {result.copilot && <CopilotCard copilot={result.copilot} />}
+
+          {/* SECTION 7: Recommended Corrective Actions */}
           <div className="glass-card" style={{ padding: '1.75rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.5rem' }}>
-              Recommended Corrective Actions
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '1.25rem' }}>
-              Specific engineering and administrative controls for {result.hazard_category}:
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <CheckSquare size={18} color="#10B981" />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#F8FAFC', margin: 0 }}>
+                7. Recommended Safety Officer Actions
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '1.25rem' }}>
+              Specific engineering and administrative controls recommended for {result.hazard_category}:
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.85rem' }}>
               {result.recommended_action?.map((action, idx) => {
@@ -580,10 +683,10 @@ export default function AnalyzeReport({ onNavigateToReport }) {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                 <div>
                   <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#F8FAFC' }}>
-                    Similar Historical Reports
+                    Similar Stored Historical Reports
                   </h3>
                   <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
-                    Identified via TF-IDF cosine text similarity in historical database:
+                    Matched via TF-IDF cosine similarity against historical database records:
                   </span>
                 </div>
               </div>
@@ -618,7 +721,7 @@ export default function AnalyzeReport({ onNavigateToReport }) {
             </div>
           )}
 
-          {/* Human Safety Officer Feedback */}
+          {/* Human Safety Officer Feedback (Feature 7) */}
           {result.id && <FeedbackModal reportId={result.id} />}
         </div>
       )}

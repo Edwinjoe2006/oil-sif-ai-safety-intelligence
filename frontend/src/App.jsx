@@ -1,99 +1,108 @@
 import React, { useState, useEffect } from 'react';
+import { api } from './services/api';
 import Sidebar from './components/Sidebar';
 import TopNavbar from './components/TopNavbar';
+import SIHDemoModal from './components/SIHDemoModal';
+
+// Pages
 import Dashboard from './pages/Dashboard';
 import AnalyzeReport from './pages/AnalyzeReport';
 import ReportsExplorer from './pages/ReportsExplorer';
 import ReportDetails from './pages/ReportDetails';
+import RiskPriorityQueue from './pages/RiskPriorityQueue';
 import EmergingRisks from './pages/EmergingRisks';
 import HazardIntelligence from './pages/HazardIntelligence';
 import ModelPerformance from './pages/ModelPerformance';
 import Settings from './pages/Settings';
 
-// SIH Advanced Upgrade Pages
+// 10 Advanced Feature Pages
 import AssetIntelligence from './pages/AssetIntelligence';
-import ImageInspection from './pages/ImageInspection';
 import RiskSimulator from './pages/RiskSimulator';
+import ImageInspection from './pages/ImageInspection';
 import CausalAnalysis from './pages/CausalAnalysis';
-import AIQuality from './pages/AIQuality';
-import AIDecisionTrace from './pages/AIDecisionTrace';
 import AlertCenter from './pages/AlertCenter';
 import CorrectiveActions from './pages/CorrectiveActions';
+import AIQuality from './pages/AIQuality';
+import AIDecisionTrace from './pages/AIDecisionTrace';
 import PredictiveTrends from './pages/PredictiveTrends';
-
-import { api } from './services/api';
 
 export default function App() {
   const [activePage, setActivePage] = useState('dashboard');
   const [selectedReportId, setSelectedReportId] = useState(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [health, setHealth] = useState(null);
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
   useEffect(() => {
-    async function loadHealth() {
+    async function checkHealth() {
       try {
-        const data = await api.getHealth();
-        setHealth(data);
+        const res = await api.getHealth();
+        setHealth(res);
       } catch (err) {
-        console.warn('Backend connection standby:', err.message);
+        console.error("Health check error:", err);
       }
     }
-    loadHealth();
-    const interval = setInterval(loadHealth, 30000);
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  const navigateToReport = (reportId) => {
+  const handleNavigateToReport = (reportId) => {
     setSelectedReportId(reportId);
     setActivePage('report-details');
   };
 
-  const navigateToAnalyze = () => {
+  const handleNavigateToAnalyze = () => {
     setActivePage('analyze');
   };
 
   return (
-    <div className="app-container">
-      {/* Collapsible Industrial Navigation Sidebar */}
+    <div className="app-layout">
       <Sidebar
-        activePage={activePage === 'report-details' ? 'reports' : activePage}
-        setActivePage={(page) => {
-          setActivePage(page);
-          if (page !== 'report-details') setSelectedReportId(null);
+        activePage={activePage}
+        setActivePage={(p) => {
+          setActivePage(p);
+          setMobileMenuOpen(false);
         }}
-        collapsed={collapsed}
-        setCollapsed={setCollapsed}
+        collapsed={sidebarCollapsed}
+        setCollapsed={setSidebarCollapsed}
         health={health}
       />
 
-      {/* Main Content Area */}
-      <div className="main-content">
-        <TopNavbar activePage={activePage} health={health} />
+      <div className="app-main-content">
+        <TopNavbar
+          activePage={activePage}
+          health={health}
+          onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
+          onOpenDemo={() => setIsDemoModalOpen(true)}
+        />
 
-        <main style={{ flex: 1, paddingBottom: '3rem' }}>
-          {/* Core Operations */}
+        <main className="app-content-body">
           {activePage === 'dashboard' && (
             <Dashboard
-              onNavigateToAnalyze={navigateToAnalyze}
-              onNavigateToReport={navigateToReport}
+              onNavigateToAnalyze={handleNavigateToAnalyze}
+              onNavigateToReport={handleNavigateToReport}
+              onOpenDemo={() => setIsDemoModalOpen(true)}
+              onNavigate={setActivePage}
             />
           )}
 
           {activePage === 'analyze' && (
-            <AnalyzeReport onNavigateToReport={navigateToReport} />
-          )}
-
-          {activePage === 'reports' && (
-            <ReportsExplorer
-              onNavigateToReport={navigateToReport}
-              onNavigateToAnalyze={navigateToAnalyze}
+            <AnalyzeReport
+              onNavigateToReport={handleNavigateToReport}
             />
           )}
 
           {activePage === 'priority' && (
+            <RiskPriorityQueue
+              onNavigateToReport={handleNavigateToReport}
+            />
+          )}
+
+          {activePage === 'reports' && (
             <ReportsExplorer
-              onNavigateToReport={navigateToReport}
-              onNavigateToAnalyze={navigateToAnalyze}
+              onNavigateToReport={handleNavigateToReport}
             />
           )}
 
@@ -104,13 +113,13 @@ export default function App() {
             />
           )}
 
-          {/* Risk Intelligence (Features 1, 2, 3, 4, 5, 10) */}
+          {/* 10 Advanced Feature Pages */}
           {activePage === 'emerging' && (
-            <EmergingRisks onNavigateToAnalyze={navigateToAnalyze} />
+            <EmergingRisks onNavigateToAnalyze={handleNavigateToAnalyze} />
           )}
 
           {activePage === 'assets' && (
-            <AssetIntelligence onNavigateToAnalyze={navigateToAnalyze} />
+            <AssetIntelligence onNavigateToAnalyze={handleNavigateToAnalyze} />
           )}
 
           {activePage === 'simulator' && (
@@ -122,18 +131,13 @@ export default function App() {
           )}
 
           {activePage === 'vision' && (
-            <ImageInspection />
+            <ImageInspection onNavigateToReport={handleNavigateToReport} />
           )}
 
           {activePage === 'causal' && (
             <CausalAnalysis />
           )}
 
-          {activePage === 'hazards' && (
-            <HazardIntelligence />
-          )}
-
-          {/* Governance & Quality (Features 7, 8, 9) */}
           {activePage === 'alerts' && (
             <AlertCenter />
           )}
@@ -150,6 +154,10 @@ export default function App() {
             <AIDecisionTrace />
           )}
 
+          {activePage === 'hazards' && (
+            <HazardIntelligence />
+          )}
+
           {activePage === 'performance' && (
             <ModelPerformance />
           )}
@@ -159,6 +167,16 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* SIH Demonstration Walkthrough Modal */}
+      <SIHDemoModal
+        isOpen={isDemoModalOpen}
+        onClose={() => setIsDemoModalOpen(false)}
+        onNavigate={(page) => {
+          setActivePage(page);
+          setIsDemoModalOpen(false);
+        }}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bot, ShieldAlert, Sparkles, CheckCircle2, Send, BookOpen, AlertCircle } from 'lucide-react';
+import { Bot, ShieldAlert, Sparkles, CheckCircle2, Send, BookOpen, AlertCircle, Info } from 'lucide-react';
 import { api } from '../services/api';
 
 export default function CopilotCard({ copilot }) {
@@ -21,16 +21,23 @@ export default function CopilotCard({ copilot }) {
       setChatQuery('');
     } catch (err) {
       console.error(err);
+      setChatResponse({
+        answer: "Insufficient evidence in the available data.",
+        cited_standards: []
+      });
     } finally {
       setLoading(false);
     }
   }
 
   const quickPrompts = [
-    "OSHA 1910.119 PSM Protocols",
-    "API RP 55 Sour Gas (H2S) Rules",
-    "API RP 2D Critical Crane Lifting",
-    "SIMOPS Hot Work LEL Permitting"
+    "Why is this dangerous?",
+    "Why was this classified as SIF?",
+    "What are the main risk factors?",
+    "What should the safety officer verify?",
+    "Are similar reports present?",
+    "What changed recently?",
+    "What corrective actions are still open?"
   ];
 
   return (
@@ -60,10 +67,10 @@ export default function CopilotCard({ copilot }) {
           </div>
           <div>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#FFFFFF', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              Advanced AI Safety Copilot
+              AI Safety Copilot Assistant
               <Sparkles size={16} color="#38BDF8" />
             </h3>
-            <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Interactive SIF Reasoning, OSHA/API RP 75 & Regulatory Engine</span>
+            <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Interactive SIF Reasoning, OSHA 1910, API RP 75 & Regulatory Guidance</span>
           </div>
         </div>
 
@@ -110,7 +117,7 @@ export default function CopilotCard({ copilot }) {
           {copilot.recommended_immediate_actions && copilot.recommended_immediate_actions.length > 0 && (
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#10B981', marginBottom: '0.5rem' }}>
-                Immediate Field Actions
+                Recommended Field Actions
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 {copilot.recommended_immediate_actions.map((act, i) => (
@@ -128,7 +135,7 @@ export default function CopilotCard({ copilot }) {
       {/* Interactive Copilot Query Bar */}
       <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '1.25rem' }}>
         <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#38BDF8', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <Bot size={16} /> Ask Safety Copilot a Question:
+          <Bot size={16} /> Suggested Safety Inquiries:
         </div>
 
         {/* Quick prompt chips */}
@@ -138,10 +145,10 @@ export default function CopilotCard({ copilot }) {
               key={i}
               type="button"
               onClick={() => handleAsk(p)}
-              className="secondary-btn"
-              style={{ fontSize: '0.7rem', padding: '0.3rem 0.65rem' }}
+              className="btn btn-secondary"
+              style={{ fontSize: '0.72rem', padding: '0.3rem 0.65rem' }}
             >
-              ?? {p}
+              💬 {p}
             </button>
           ))}
         </div>
@@ -157,25 +164,25 @@ export default function CopilotCard({ copilot }) {
             type="text"
             value={chatQuery}
             onChange={(e) => setChatQuery(e.target.value)}
-            placeholder="Ask anything about OSHA, API RP 75, IOGP Life Saving Rules, or barrier mitigation..."
-            className="industrial-input"
+            placeholder="Ask anything about OSHA 1910, API RP 75, or barrier verification..."
+            className="form-input"
             style={{ flex: 1, fontSize: '0.85rem' }}
           />
           <button
             type="submit"
             disabled={loading || !chatQuery.trim()}
-            className="primary-btn"
+            className="btn btn-primary"
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1rem' }}
           >
-            <Send size={14} /> {loading ? 'Thinking...' : 'Ask'}
+            <Send size={14} /> {loading ? 'Analyzing...' : 'Ask'}
           </button>
         </form>
 
         {/* Copilot Chat Response */}
         {chatResponse && (
-          <div style={{ marginTop: '1rem', background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '8px', padding: '1rem' }}>
+          <div style={{ marginTop: '1rem', background: '#070D1E', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '8px', padding: '1rem' }}>
             <div style={{ fontSize: '0.875rem', color: '#F1F5F9', lineHeight: 1.6, marginBottom: '0.75rem' }}>
-              {chatResponse.answer}
+              {chatResponse.answer || "Insufficient evidence in the available data."}
             </div>
 
             {chatResponse.sif_warning && (
@@ -190,7 +197,7 @@ export default function CopilotCard({ copilot }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.25rem' }}>
                   {chatResponse.cited_standards.map((st, i) => (
                     <span key={i} style={{ fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.1)', color: '#38BDF8', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                      ?? {st}
+                      📋 {st}
                     </span>
                   ))}
                 </div>

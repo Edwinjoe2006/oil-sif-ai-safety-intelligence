@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckSquare, ArrowRight, ShieldCheck, RefreshCw, Plus, UserCheck, Clock } from 'lucide-react';
+import { CheckSquare, AlertTriangle, ShieldCheck, Clock, CheckCircle2, User, RefreshCw, Plus, Info } from 'lucide-react';
 import { api } from '../services/api';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 
@@ -19,12 +19,9 @@ export default function CorrectiveActions() {
     }
   }
 
-  async function handleTransition(actionId, nextStatus) {
+  async function handleStatusChange(actionId, newStatus) {
     try {
-      await api.transitionAction(actionId, {
-        new_status: nextStatus,
-        evidence: `Verified step transition to ${nextStatus}`
-      });
+      await api.updateActionStatus(actionId, newStatus, 'Verified by Duty Safety Lead');
       await loadActions();
     } catch (err) {
       console.error(err);
@@ -43,76 +40,87 @@ export default function CorrectiveActions() {
     );
   }
 
-  const STAGES = ['OPEN', 'ASSIGNED', 'IN PROGRESS', 'VERIFICATION', 'CLOSED'];
+  const columns = ['OPEN', 'ASSIGNED', 'IN PROGRESS', 'VERIFICATION', 'CLOSED'];
 
   return (
     <div className="page-wrapper">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#10B981', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-            <CheckSquare size={14} /> Feature 9 ? 5-Stage CAPA Lifecycle
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#38BDF8', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+            <CheckSquare size={14} /> Feature 9 • CAPA Safety Governance
           </div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#FFFFFF', letterSpacing: '-0.02em' }}>
-            Corrective & Preventive Action (CAPA) Center
+            Corrective & Preventive Actions (CAPA)
           </h2>
           <p style={{ fontSize: '0.9rem', color: '#94A3B8', marginTop: '0.25rem' }}>
-            5-Stage structured remediation: Open ? Assigned ? In Progress ? Verification ? Closed.
+            5-Stage CAPA lifecycle. Clearly distinguishing AI recommendations from recorded human completions.
           </p>
         </div>
-        <button onClick={loadActions} className="secondary-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-          <RefreshCw size={16} /> Refresh CAPA
+        <button onClick={loadActions} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+          <RefreshCw size={16} /> Sync CAPA
         </button>
       </div>
 
       {/* 5-Stage Kanban Board */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', overflowX: 'auto', minWidth: '1000px', marginBottom: '2rem' }}>
-        {STAGES.map((stage) => {
-          const stageActions = actions.filter(a => (a.status || 'OPEN').toUpperCase() === stage);
-          const stageColor = 
-            stage === 'OPEN' ? '#EF4444' :
-            stage === 'ASSIGNED' ? '#F97316' :
-            stage === 'IN PROGRESS' ? '#38BDF8' :
-            stage === 'VERIFICATION' ? '#818CF8' : '#10B981';
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', alignItems: 'start' }}>
+        {columns.map((col) => {
+          const colActions = actions.filter(a => a.status === col);
 
           return (
-            <div key={stage} style={{ background: 'rgba(15, 23, 42, 0.6)', border: `1px solid rgba(255,255,255,0.06)`, borderTop: `4px solid ${stageColor}`, borderRadius: '8px', padding: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: stageColor }}>{stage}</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: '800', background: 'rgba(255,255,255,0.08)', padding: '0.15rem 0.45rem', borderRadius: '4px', color: '#F1F5F9' }}>
-                  {stageActions.length}
+            <div key={col} className="glass-card" style={{ padding: '1rem', minHeight: '350px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38BDF8', letterSpacing: '0.05em' }}>
+                  {col}
+                </span>
+                <span style={{ fontSize: '0.75rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.08)', color: '#CBD5E1', fontWeight: '700' }}>
+                  {colActions.length}
                 </span>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {stageActions.map((act) => (
-                  <div key={act.id} className="glass-card" style={{ padding: '0.85rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748B', marginBottom: '0.35rem' }}>
-                      <span>#{act.id} (Rep #{act.report_id})</span>
-                      <span style={{ color: act.priority === 'CRITICAL' ? '#EF4444' : '#F59E0B', fontWeight: '700' }}>{act.priority}</span>
-                    </div>
-                    <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#F8FAFC', marginBottom: '0.75rem', lineHeight: 1.3 }}>
-                      {act.action_text}
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: '#94A3B8', marginBottom: '0.75rem' }}>
-                      Dept: <strong>{act.department}</strong>
+                {colActions.map((action) => (
+                  <div
+                    key={action.id}
+                    style={{
+                      background: '#070D1E',
+                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                      borderRadius: '8px',
+                      padding: '0.85rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: action.priority === 'CRITICAL' ? '#EF4444' : '#F59E0B', textTransform: 'uppercase' }}>
+                        {action.priority}
+                      </span>
+                      <span style={{ fontSize: '0.65rem', color: '#64748B' }}>CAPA-{action.id}</span>
                     </div>
 
-                    {/* Transition Next Button */}
-                    {stage !== 'CLOSED' && (
-                      <button
-                        onClick={() => {
-                          const nextIdx = STAGES.indexOf(stage) + 1;
-                          if (nextIdx < STAGES.length) {
-                            handleTransition(act.id, STAGES[nextIdx]);
-                          }
-                        }}
-                        className="secondary-btn"
-                        style={{ width: '100%', fontSize: '0.7rem', padding: '0.35rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
-                      >
-                        Move to {STAGES[STAGES.indexOf(stage) + 1]} <ArrowRight size={12} />
-                      </button>
-                    )}
+                    <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#F8FAFC', marginBottom: '0.5rem', lineHeight: '1.3' }}>
+                      {action.action_title}
+                    </p>
+
+                    <div style={{ fontSize: '0.7rem', color: '#94A3B8', marginBottom: '0.75rem' }}>
+                      Assigned: <strong style={{ color: '#CBD5E1' }}>{action.assigned_to}</strong>
+                    </div>
+
+                    {/* Stage Transition Selector */}
+                    <select
+                      value={action.status}
+                      onChange={(e) => handleStatusChange(action.id, e.target.value)}
+                      style={{
+                        width: '100%',
+                        fontSize: '0.7rem',
+                        padding: '0.3rem',
+                        background: '#0F172A',
+                        color: '#38BDF8',
+                        border: '1px solid rgba(56, 189, 248, 0.25)',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {columns.map(c => <option key={c} value={c}>Move to {c}</option>)}
+                    </select>
                   </div>
                 ))}
               </div>

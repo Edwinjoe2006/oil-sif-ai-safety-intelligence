@@ -1,7 +1,7 @@
 import React from 'react';
-import { Search, Bell, ShieldCheck, User, Menu } from 'lucide-react';
+import { Search, Bell, ShieldCheck, User, Menu, Sparkles } from 'lucide-react';
 
-export default function TopNavbar({ activePage, health, onToggleMobileMenu }) {
+export default function TopNavbar({ activePage, health, onToggleMobileMenu, onOpenDemo }) {
   const pageTitles = {
     dashboard: 'Safety Intelligence Overview',
     analyze: 'Analyze Safety Report & Precursors',
@@ -11,6 +11,15 @@ export default function TopNavbar({ activePage, health, onToggleMobileMenu }) {
     hazards: 'Hazard Intelligence & Frequency',
     performance: 'Model Performance & Evaluation Metrics',
     settings: 'System Configuration & Data Pipeline',
+    assets: 'Asset-Level Risk & Degradation Intelligence',
+    simulator: 'What-If Operational Risk Simulator',
+    forecast: 'Predictive Safety Trend Forecasting',
+    vision: 'Vision AI Safety Inspection',
+    causal: 'Causal / Bow-Tie Barrier Analysis',
+    alerts: 'Safety Alert & Notification Center',
+    actions: 'Corrective & Preventive Actions (CAPA)',
+    quality: 'AI Quality & Expert Agreement Dashboard',
+    audit: 'AI Decision Audit Trail & Explainability Trace',
   };
 
   return (
@@ -46,7 +55,32 @@ export default function TopNavbar({ activePage, health, onToggleMobileMenu }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        {/* SIH Demo Guide Button */}
+        {onOpenDemo && (
+          <button
+            type="button"
+            onClick={onOpenDemo}
+            className="btn btn-secondary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.4rem 0.85rem',
+              fontSize: '0.75rem',
+              fontWeight: '800',
+              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.25) 0%, rgba(37, 99, 235, 0.25) 100%)',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
+              color: '#38BDF8',
+              borderRadius: '9999px',
+              cursor: 'pointer'
+            }}
+          >
+            <Sparkles size={14} />
+            <span>SIH Demo Tour</span>
+          </button>
+        )}
+
         {/* Status Indicator */}
         <div
           className="top-navbar-badge"

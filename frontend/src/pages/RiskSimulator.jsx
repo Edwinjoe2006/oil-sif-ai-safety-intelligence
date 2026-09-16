@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Sliders, AlertTriangle, ShieldCheck, Zap, RotateCcw, ArrowRight } from 'lucide-react';
+import { Sliders, AlertTriangle, ShieldCheck, Zap, RotateCcw, ArrowRight, Info } from 'lucide-react';
 import { api } from '../services/api';
+import InfoTooltip from '../components/InfoTooltip';
 
 export default function RiskSimulator() {
   const [pressure, setPressure] = useState(160);
@@ -14,6 +15,9 @@ export default function RiskSimulator() {
 
   const [simResult, setSimResult] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Baseline standard risk reference
+  const baselineRisk = 45;
 
   async function runSimulation() {
     try {
@@ -40,18 +44,21 @@ export default function RiskSimulator() {
     runSimulation();
   }, [pressure, wind, shift, fatigue, barrier, wear, experience, hazard]);
 
+  const simulatedRisk = simResult?.simulated_risk_score || baselineRisk;
+  const riskDelta = simulatedRisk - baselineRisk;
+
   return (
     <div className="page-wrapper">
-      {/* Header */}
+      {/* Header with Explicit Purpose */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#38BDF8', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-          <Sliders size={14} /> Feature 4 ? Interactive Risk Engine
+          <Sliders size={14} /> Feature 4 • Interactive Risk Simulator
         </div>
         <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#FFFFFF', letterSpacing: '-0.02em' }}>
           What-If Operational Risk Simulator
         </h2>
-        <p style={{ fontSize: '0.9rem', color: '#94A3B8', marginTop: '0.25rem' }}>
-          Simulate operational stress parameters (pressure, fatigue, weather, barrier bypass) to observe real-time SIF escalation.
+        <p style={{ fontSize: '0.9rem', color: '#CBD5E1', marginTop: '0.35rem', maxWidth: '720px', lineHeight: '1.5' }}>
+          <strong>Purpose:</strong> Explore how changing selected operational or safety-control conditions affects the model's risk score.
         </p>
       </div>
 
@@ -70,7 +77,7 @@ export default function RiskSimulator() {
             <select
               value={hazard}
               onChange={(e) => setHazard(e.target.value)}
-              className="industrial-input"
+              className="form-select"
             >
               <option value="Hydrocarbon Release / Flammable Vapor">Hydrocarbon Release / Flammable Vapor</option>
               <option value="High Pressure Piping & Flange Leaks">High Pressure Piping & Flange Leaks</option>
@@ -99,153 +106,101 @@ export default function RiskSimulator() {
           {/* Wind Speed Slider */}
           <div style={{ marginBottom: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: '700', color: '#CBD5E1', marginBottom: '0.35rem' }}>
-              <span>Wind Speed:</span>
-              <strong style={{ color: wind > 25 ? '#EF4444' : '#38BDF8' }}>{wind} Knots</strong>
+              <span>Offshore Wind Speed:</span>
+              <strong style={{ color: wind > 30 ? '#EF4444' : '#38BDF8' }}>{wind} Knots</strong>
             </div>
             <input
               type="range"
               min="0"
-              max="50"
+              max="60"
               value={wind}
               onChange={(e) => setWind(Number(e.target.value))}
               style={{ width: '100%', accentColor: '#38BDF8' }}
             />
           </div>
 
-          {/* Equipment Wear */}
-          <div style={{ marginBottom: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: '700', color: '#CBD5E1', marginBottom: '0.35rem' }}>
-              <span>Equipment Wear / Degradation:</span>
-              <strong style={{ color: wear > 60 ? '#EF4444' : '#38BDF8' }}>{wear}%</strong>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={wear}
-              onChange={(e) => setWear(Number(e.target.value))}
-              style={{ width: '100%', accentColor: '#38BDF8' }}
-            />
-          </div>
-
-          {/* Dropdowns Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#CBD5E1', marginBottom: '0.35rem' }}>
-                Shift Type
-              </label>
-              <select
-                value={shift}
-                onChange={(e) => setShift(e.target.value)}
-                className="industrial-input"
-              >
-                <option value="Day Shift">Day Shift</option>
-                <option value="Night Shift">Night Shift</option>
-                <option value="Turnaround">Turnaround (SIMOPS)</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#CBD5E1', marginBottom: '0.35rem' }}>
-                Crew Fatigue Level
-              </label>
-              <select
-                value={fatigue}
-                onChange={(e) => setFatigue(e.target.value)}
-                className="industrial-input"
-              >
-                <option value="Low">Low</option>
-                <option value="Moderate">Moderate</option>
-                <option value="High">High</option>
-                <option value="Severe">Severe</option>
-              </select>
-            </div>
-          </div>
-
           {/* Safety Barrier Status */}
           <div style={{ marginBottom: '1.25rem' }}>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#CBD5E1', marginBottom: '0.35rem' }}>
-              Safety Barrier Status
+              Safety Barrier Status (Engineering Controls)
             </label>
             <select
               value={barrier}
               onChange={(e) => setBarrier(e.target.value)}
-              className="industrial-input"
+              className="form-select"
             >
-              <option value="Active & Intact">Active & Intact</option>
+              <option value="Intact">Intact (All Controls Functioning)</option>
               <option value="Partially Degraded">Partially Degraded</option>
-              <option value="Bypassed">Bypassed (Critical Override)</option>
+              <option value="Bypassed / Inactive">Bypassed / Inactive (Emergency Risk)</option>
             </select>
+          </div>
+
+          {/* Fatigue Level */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#CBD5E1', marginBottom: '0.35rem' }}>
+              Crew Fatigue / Shift Timing
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+              {['Low', 'Moderate', 'High'].map((lvl) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => setFatigue(lvl)}
+                  className="btn btn-secondary"
+                  style={{
+                    background: fatigue === lvl ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+                    borderColor: fatigue === lvl ? '#38BDF8' : 'rgba(255,255,255,0.1)',
+                    color: fatigue === lvl ? '#38BDF8' : '#94A3B8',
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  {lvl} Fatigue
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Dynamic Simulation Output */}
-        {simResult && (
-          <div>
-            {/* Risk Comparison Card */}
-            <div className="glass-card" style={{ padding: '1.75rem', marginBottom: '1.5rem', borderTop: `4px solid ${simResult.risk_level === 'CRITICAL' ? '#EF4444' : (simResult.risk_level === 'HIGH' ? '#F97316' : '#10B981')}` }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase' }}>
-                SIMULATED RISK ASSESSMENT
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', marginBottom: '1rem' }}>
-                <div>
-                  <div style={{ fontSize: '2rem', fontWeight: '900', color: '#F8FAFC' }}>
-                    {simResult.simulated_risk_score} / 100
-                  </div>
-                  <span style={{ fontSize: '0.8rem', fontWeight: '800', color: simResult.risk_level === 'CRITICAL' ? '#EF4444' : '#F97316' }}>
-                    {simResult.risk_level} RISK
-                  </span>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.1rem', fontWeight: '800', color: simResult.probability_delta > 0 ? '#EF4444' : '#10B981' }}>
-                    {simResult.probability_delta > 0 ? `+${simResult.probability_delta}%` : `${simResult.probability_delta}%`}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B' }}>DELTA FROM BASELINE</div>
-                </div>
-              </div>
+        {/* Live Simulation Output Card */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="glass-card" style={{ padding: '1.75rem', borderLeft: `6px solid ${simulatedRisk >= 75 ? '#EF4444' : simulatedRisk >= 50 ? '#F97316' : '#10B981'}` }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              SIMULATED RISK ASSESSMENT
+            </span>
 
-              {/* SIF Probability Bar */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94A3B8', marginBottom: '0.35rem' }}>
-                  <span>Simulated SIF Probability</span>
-                  <strong style={{ color: '#F8FAFC' }}>{Math.round(simResult.simulated_sif_probability * 100)}%</strong>
-                </div>
-                <div style={{ width: '100%', height: '8px', background: '#0F172A', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ width: `${simResult.simulated_sif_probability * 100}%`, height: '100%', background: simResult.simulated_sif_probability > 0.6 ? '#EF4444' : '#38BDF8' }} />
-                </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ background: '#070D1E', padding: '1rem', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700' }}>CURRENT BASELINE RISK</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: '#94A3B8' }}>{baselineRisk} / 100</div>
               </div>
-
-              {/* Barrier Breakdown */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#CBD5E1', marginBottom: '0.5rem' }}>
-                  Barrier Impact Multipliers:
+              <div style={{ background: '#070D1E', padding: '1rem', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.72rem', color: '#38BDF8', fontWeight: '700' }}>SIMULATED RISK</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: simulatedRisk >= 75 ? '#EF4444' : simulatedRisk >= 50 ? '#F97316' : '#10B981' }}>
+                  {simulatedRisk} / 100
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {simResult.barrier_breakdown.map((b, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(15, 23, 42, 0.5)', padding: '0.6rem 0.8rem', borderRadius: '6px', fontSize: '0.75rem' }}>
-                      <span style={{ color: '#E2E8F0' }}>{b.barrier_name}</span>
-                      <strong style={{ color: b.status === 'Intact' ? '#10B981' : '#EF4444' }}>
-                        {b.status} ({b.risk_multiplier}x)
-                      </strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Mitigation levers */}
-              <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#10B981', marginBottom: '0.35rem' }}>
-                  Actionable Risk De-escalation Levers:
-                </div>
-                <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.775rem', color: '#94A3B8', lineHeight: '1.4' }}>
-                  {simResult.mitigation_levers.map((m, i) => (
-                    <li key={i}>{m}</li>
-                  ))}
-                </ul>
               </div>
             </div>
+
+            {/* Delta points */}
+            <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.85rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '0.825rem', color: '#CBD5E1', fontWeight: '600' }}>Risk Score Delta:</span>
+              <strong style={{ fontSize: '1rem', color: riskDelta > 0 ? '#EF4444' : '#10B981' }}>
+                {riskDelta > 0 ? `+${riskDelta}` : `${riskDelta}`} points
+              </strong>
+            </div>
+
+            {/* Explanatory notes */}
+            <div style={{ fontSize: '0.825rem', color: '#CBD5E1', lineHeight: '1.4', marginBottom: '1rem' }}>
+              <strong>Selected Change:</strong> {barrier} barrier with {fatigue.toLowerCase()} crew fatigue at {pressure} PSI.
+            </div>
+
+            {/* Explicit Disclaimer */}
+            <div style={{ padding: '0.75rem', borderRadius: '6px', background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.2)', fontSize: '0.75rem', color: '#38BDF8', lineHeight: '1.4' }}>
+              <Info size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+              <strong>Model-based simulation only.</strong> This does not guarantee actual field risk reduction and is designed for engineering what-if scenarios and safety training.
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

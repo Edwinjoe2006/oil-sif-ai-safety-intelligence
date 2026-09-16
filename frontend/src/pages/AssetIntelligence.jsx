@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, ShieldAlert, Wrench, CheckCircle2, AlertTriangle, Activity, X } from 'lucide-react';
+import { Layers, ShieldAlert, Wrench, CheckCircle2, AlertTriangle, Activity, X, Info } from 'lucide-react';
 import { api } from '../services/api';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import InfoTooltip from '../components/InfoTooltip';
 
 export default function AssetIntelligence({ onNavigateToAnalyze }) {
   const [assets, setAssets] = useState([]);
@@ -50,17 +51,17 @@ export default function AssetIntelligence({ onNavigateToAnalyze }) {
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#38BDF8', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-          <Layers size={14} /> Feature 2 ? Equipment Risk Index
+          <Layers size={14} /> Feature 2 • Equipment Risk Index
         </div>
         <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#FFFFFF', letterSpacing: '-0.02em' }}>
           Asset-Level Risk & Degradation Intelligence
         </h2>
         <p style={{ fontSize: '0.9rem', color: '#94A3B8', marginTop: '0.25rem' }}>
-          Dynamic risk rankings, degradation levels, and precursor event tracking across critical oil & gas equipment.
+          Practical equipment health summaries synthesized from stored safety observations and model-based degradation estimates.
         </p>
       </div>
 
-      {/* Asset Grid */}
+      {/* Asset Cards Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
         {assets.map((asset) => {
           const riskColor = 
@@ -80,51 +81,60 @@ export default function AssetIntelligence({ onNavigateToAnalyze }) {
                   <p style={{ fontSize: '0.8rem', color: '#94A3B8' }}>{asset.asset_type}</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.5rem', fontWeight: '900', color: riskColor }}>
-                    {asset.risk_score}
+                  <div style={{ fontSize: '1.6rem', fontWeight: '900', color: riskColor }}>
+                    {asset.risk_score} / 100
                   </div>
                   <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: '700' }}>RISK SCORE</div>
                 </div>
               </div>
 
-              <div style={{ fontSize: '0.8rem', color: '#CBD5E1', marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.8rem', color: '#CBD5E1', marginBottom: '0.75rem' }}>
                 Location: <strong>{asset.location}</strong>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', background: 'rgba(15, 23, 42, 0.6)', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.25rem' }}>
+              {/* Status & Precursors Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', background: '#0B132B', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Degradation</div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748B' }}>SIF Precursors Logged</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: '800', color: asset.sif_precursor_count > 0 ? '#EF4444' : '#10B981' }}>
+                    {asset.sif_precursor_count} Precursors
+                  </div>
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', color: '#64748B' }}>
+                    <span>Degradation</span>
+                    <InfoTooltip term="model_estimate" size={11} />
+                  </div>
                   <div style={{ fontSize: '0.85rem', fontWeight: '700', color: asset.degradation_level === 'Severe' ? '#EF4444' : '#F1F5F9' }}>
-                    {asset.degradation_level}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Precursors Logged</div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#38BDF8' }}>
-                    {asset.precursor_count} events
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Failure Probability</div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#F59E0B' }}>
-                    {Math.round(asset.failure_probability * 100)}%
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Status</div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: '700', color: asset.maintenance_status === 'Operational' ? '#10B981' : '#EF4444' }}>
-                    {asset.maintenance_status}
+                    {asset.degradation_level} (Model-based estimate)
                   </div>
                 </div>
               </div>
 
-              <button
-                onClick={() => openProfile(asset.id)}
-                className="primary-btn"
-                style={{ width: '100%', fontSize: '0.825rem', padding: '0.6rem' }}
-              >
-                Inspect Asset Risk Profile
-              </button>
+              {/* Practical Meaning */}
+              <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.25rem' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                  PRACTICAL MEANING:
+                </div>
+                <p style={{ fontSize: '0.78rem', color: '#CBD5E1', margin: 0, lineHeight: '1.4' }}>
+                  {asset.risk_score >= 50
+                    ? `This asset has multiple stored safety observations and elevated model-based risk (${asset.risk_score}/100). Review recent observations and open corrective actions.`
+                    : `This asset is operating within acceptable safety parameters with routine preventive monitoring scheduled.`}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                  Uptime Readiness: <strong style={{ color: '#10B981' }}>{asset.uptime_readiness_index || 94}%</strong>
+                </div>
+                <button
+                  onClick={() => openProfile(asset.id)}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}
+                >
+                  View Profile
+                </button>
+              </div>
             </div>
           );
         })}
@@ -132,67 +142,71 @@ export default function AssetIntelligence({ onNavigateToAnalyze }) {
 
       {/* Asset Profile Modal */}
       {selectedProfile && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1.5rem' }}>
-          <div className="glass-card" style={{ maxWidth: '680px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(5, 10, 23, 0.85)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem'
+          }}
+          onClick={() => setSelectedProfile(null)}
+        >
+          <div
+            className="glass-card"
+            style={{
+              width: '100%',
+              maxWidth: '600px',
+              backgroundColor: '#0B132B',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              padding: '2rem',
+              borderRadius: '16px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38BDF8' }}>ASSET PROFILE</span>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#F8FAFC' }}>
-                  {selectedProfile.asset.name}
+                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#38BDF8', textTransform: 'uppercase' }}>
+                  EQUIPMENT RISK PROFILE
+                </span>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#FFFFFF' }}>
+                  {selectedProfile.asset_name}
                 </h3>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedProfile(null)}
-                style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer' }}
               >
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
 
-            {/* Uptime Index */}
-            <div style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#38BDF8' }}>UPTIME SAFETY INDEX</div>
-                <div style={{ fontSize: '0.825rem', color: '#94A3B8' }}>Calculated operational resilience margin</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ background: '#070D1E', padding: '1rem', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Recommended Non-Destructive Testing (NDT):</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#F8FAFC', marginTop: '0.25rem' }}>
+                  {selectedProfile.recommended_ndt_action || 'Ultrasonic Thickness (UT) Wall Measurement'}
+                </div>
               </div>
-              <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#38BDF8' }}>
-                {selectedProfile.uptime_safety_index}%
+
+              <div style={{ background: '#070D1E', padding: '1rem', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Next Inspection Due:</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#F8FAFC', marginTop: '0.25rem' }}>
+                  {selectedProfile.next_inspection_due ? new Date(selectedProfile.next_inspection_due).toLocaleDateString() : 'Within 7 operational days'}
+                </div>
               </div>
-            </div>
 
-            {/* Vulnerability factors */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.75rem' }}>
-                Identified Vulnerability Factors
-              </h4>
-              <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.85rem', color: '#CBD5E1', lineHeight: '1.5' }}>
-                {selectedProfile.vulnerability_factors.map((v, i) => (
-                  <li key={i}>{v}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Maintenance recommendations */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#F8FAFC', marginBottom: '0.75rem' }}>
-                Targeted Maintenance Recommendations
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {selectedProfile.maintenance_recommendations.map((rec, i) => (
-                  <div key={i} style={{ background: 'rgba(15, 23, 42, 0.5)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.825rem', color: '#E2E8F0', borderLeft: '3px solid #10B981' }}>
-                    {rec}
-                  </div>
-                ))}
+              <div style={{ fontSize: '0.75rem', color: '#64748B', lineHeight: '1.4' }}>
+                * All failure probabilities and degradation levels are model-based estimates derived from historical safety reports.
               </div>
             </div>
-
-            <button
-              onClick={() => setSelectedProfile(null)}
-              className="secondary-btn"
-              style={{ width: '100%' }}
-            >
-              Close Profile
-            </button>
           </div>
         </div>
       )}

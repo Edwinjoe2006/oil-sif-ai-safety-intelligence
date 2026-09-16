@@ -10,7 +10,9 @@ import {
   ArrowDownRight,
   Minus,
   RefreshCw,
-  Eye
+  Eye,
+  Sparkles,
+  Info
 } from 'lucide-react';
 import {
   Chart as ChartJS,
@@ -33,6 +35,8 @@ import RiskBadge from '../components/RiskBadge';
 import AlertCard from '../components/AlertCard';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
+import WorkflowBar from '../components/WorkflowBar';
+import InfoTooltip from '../components/InfoTooltip';
 
 // Register ChartJS modules
 ChartJS.register(
@@ -48,7 +52,7 @@ ChartJS.register(
   Filler
 );
 
-export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
+export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport, onOpenDemo, onNavigate }) {
   const [stats, setStats] = useState(null);
   const [trends, setTrends] = useState(null);
   const [priorityQueue, setPriorityQueue] = useState([]);
@@ -117,7 +121,7 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
   const trendLabels = trends?.risk_trend?.map((t) => t.date) || [];
   const trendScores = trends?.risk_trend?.map((t) => t.average_risk_score) || [];
   const trendData = {
-    labels: trendLabels.length > 0 ? trendLabels : ['Day 1', 'Day 2', 'Day 3'],
+    labels: trendLabels.length > 0 ? trendLabels : ['Baseline Day 1', 'Day 2', 'Day 3'],
     datasets: [
       {
         label: 'Average Risk Score (0–100)',
@@ -141,7 +145,7 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
     labels: locationLabels.slice(0, 6),
     datasets: [
       {
-        label: 'High/Critical Incidents',
+        label: 'High/Critical Precursors',
         data: locationHighRisk.slice(0, 6),
         backgroundColor: '#EF4444',
         borderRadius: 6,
@@ -157,6 +161,9 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
 
   return (
     <div className="page-wrapper">
+      {/* 8-Step Project Story Workflow Bar */}
+      <WorkflowBar activeStep="report" onStepClick={(target) => onNavigate && onNavigate(target)} />
+
       {/* Dashboard Hero Header */}
       <div
         className="glass-card"
@@ -174,22 +181,33 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
       >
         <div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#38BDF8', fontSize: '0.75rem', fontWeight: '800', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-            <Activity size={14} /> Live Safety Intelligence
+            <Activity size={14} /> Live Safety Intelligence Overview
           </div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#FFFFFF', letterSpacing: '-0.02em' }}>
             Oil & Gas Safety Early Warning System
           </h2>
           <p style={{ fontSize: '0.9rem', color: '#CBD5E1', marginTop: '0.35rem', maxWidth: '640px', lineHeight: 1.5 }}>
-            AI-powered NLP pipeline detecting Serious Injury & Fatality (SIF) precursors in Unsafe-Act, Unsafe-Condition, and Near-Miss reports.
+            AI-powered precursor detection platform identifying potential Serious Injury & Fatality (SIF) hazards from stored field reports and sensor logs.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {onOpenDemo && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onOpenDemo}
+              style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38BDF8' }}
+            >
+              <Sparkles size={16} />
+              SIH Demo Tour
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-secondary"
             onClick={fetchDashboardData}
-            title="Refresh live metrics"
+            title="Refresh live metrics from database"
           >
             <RefreshCw size={16} />
             Sync Data
@@ -205,55 +223,66 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
         </div>
       </div>
 
-      {/* Top 6 KPI Cards */}
+      {/* Top 6 KPI Cards - Structured: VALUE -> STATUS -> SHORT MEANING */}
       <div className="grid-6" style={{ marginBottom: '2rem' }}>
         <KpiCard
           title="Total Reports"
           value={stats?.total_reports}
+          status={stats?.total_reports ? "STORED IN DB" : "NO REPORTS"}
+          meaning="Total safety observations and near-misses recorded."
           icon={Activity}
-          description="Analyzed safety events"
-          trend="Total in DB"
           color="#38BDF8"
+          tooltipText="Total count of verified safety observations loaded in the database."
         />
         <KpiCard
           title="SIF Precursors"
           value={stats?.sif_precursors_count}
+          status={stats?.sif_precursors_count > 0 ? "ATTENTION REQUIRED" : "ZERO DETECTED"}
+          meaning="Reports containing patterns associated with potential SIF events."
+          trend={stats?.total_reports ? `${Math.round((stats.sif_precursors_count / stats.total_reports) * 100)}% Rate` : undefined}
           icon={ShieldAlert}
-          description="High potential fatal precursors"
-          trend={stats?.total_reports ? `${Math.round((stats.sif_precursors_count / stats.total_reports) * 100)}% Rate` : '--'}
           color="#EF4444"
+          tooltipTerm="sif"
         />
         <KpiCard
-          title="High/Critical Risks"
+          title="High/Critical Reports"
           value={stats?.high_critical_count}
+          status={stats?.high_critical_count > 0 ? "REQUIRING ATTENTION" : "NORMAL"}
+          meaning="Reports with high model-based risk scores (>= 50)."
           icon={Flame}
-          description="Requiring urgent mitigation"
-          trend="Escalated"
           color="#F97316"
+          tooltipText="Safety incidents flagged for priority investigation and control validation."
         />
         <KpiCard
           title="Average Risk Score"
-          value={stats?.average_risk_score}
+          value={stats?.average_risk_score !== undefined && stats?.average_risk_score !== null ? `${stats.average_risk_score} / 100` : null}
+          status={
+            stats?.average_risk_score >= 75 ? "CRITICAL FLEET RISK" :
+            stats?.average_risk_score >= 50 ? "ELEVATED FLEET RISK" :
+            stats?.average_risk_score >= 25 ? "MODERATE" : "OPTIMAL"
+          }
+          meaning="Fleet-wide 0–100 index prioritizing inspection urgency."
           icon={AlertTriangle}
-          description="Fleet-wide index (0–100)"
-          trend="Score"
           color="#F59E0B"
+          tooltipTerm="risk_score"
         />
         <KpiCard
           title="Open Actions"
           value={stats?.open_corrective_actions}
+          status={stats?.open_corrective_actions > 0 ? "PENDING ACTION" : "ALL RESOLVED"}
+          meaning="Field corrective actions currently pending human completion."
           icon={CheckSquare}
-          description="Field corrective actions pending"
-          trend="Open"
           color="#818CF8"
+          tooltipTerm="capa"
         />
         <KpiCard
           title="Emerging Risks"
           value={stats?.emerging_risks_count}
+          status={stats?.emerging_risks_count > 0 ? "ELEVATED" : "NORMAL"}
+          meaning="Patterns showing increasing precursor activity over time."
           icon={TrendingUp}
-          description="Hazards with increasing velocity"
-          trend="Tracking"
           color="#34D399"
+          tooltipTerm="emerging_risk"
         />
       </div>
 
@@ -261,8 +290,8 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
       {!hasReports && (
         <div style={{ marginBottom: '2.5rem' }}>
           <EmptyState
-            title="Safety Database Awaiting First Report"
-            description="The system architecture and AI pipelines are fully loaded and operational. Analyze your first safety observation to activate real-time dashboard analytics."
+            title="Safety Database Awaiting Stored Observations"
+            description="All ML models and database tables are loaded and operational. Submit your first safety observation in Analyze Report to populate live telemetry."
             actionText="Analyze Safety Report"
             onAction={onNavigateToAnalyze}
           />
@@ -278,11 +307,12 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
             <div className="glass-card" style={{ padding: '1.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#F8FAFC' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#F8FAFC', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     Safety Risk Overview
+                    <InfoTooltip text="Distribution of stored reports across 4 risk tiers: Low (0-24), Medium (25-49), High (50-74), and Critical (75-100)." />
                   </h3>
                   <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                    Distribution across 4 severity tiers
+                    Distribution across 4 severity tiers (from stored database records)
                   </span>
                 </div>
               </div>
@@ -305,11 +335,12 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
             <div className="glass-card" style={{ padding: '1.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#F8FAFC' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#F8FAFC', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     Safety Risk Trend
+                    <InfoTooltip text="Historical average risk score progression computed directly from recorded timestamps." />
                   </h3>
                   <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                    Average risk index over time
+                    Average model-based risk index over time
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.35rem', background: '#0B132B', padding: '3px', borderRadius: '8px' }}>
@@ -358,11 +389,12 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
             <div className="glass-card" style={{ padding: '1.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#F8FAFC' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#F8FAFC', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     Safety Risk Priority Queue
+                    <InfoTooltip text="Live ranking of unresolved reports sorted by risk score descending for immediate safety officer triage." />
                   </h3>
                   <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                    Dynamic sorting by risk score descending
+                    Dynamic ranking by risk score descending (stored records)
                   </span>
                 </div>
               </div>
@@ -395,7 +427,7 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
                           <span style={{ color: '#94A3B8' }}>{item.location}</span>
                         </td>
                         <td>
-                          <span style={{ fontSize: '0.75rem', color: item.status === 'Open' ? '#EF4444' : '#10B981' }}>
+                          <span style={{ fontSize: '0.75rem', color: item.status === 'Open' ? '#EF4444' : '#10B981', fontWeight: '700' }}>
                             {item.status}
                           </span>
                         </td>
@@ -430,11 +462,12 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
             <div className="glass-card" style={{ padding: '1.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#F8FAFC' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#F8FAFC', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     Emerging Safety Risks
+                    <InfoTooltip term="emerging_risk" />
                   </h3>
                   <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                    Calculated hazard frequency velocity
+                    Calculated hazard frequency velocity from stored observations
                   </span>
                 </div>
               </div>
@@ -504,7 +537,7 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
                     Recent Critical Alerts
                   </h3>
                   <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                    Immediate attention required
+                    Immediate safety attention required
                   </span>
                 </div>
               </div>
@@ -526,7 +559,7 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
               </div>
             </div>
 
-            {/* High-Risk Reports by Location */}
+            {/* High-Risk Reports by Facility */}
             <div className="glass-card" style={{ padding: '1.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                 <div>
@@ -559,6 +592,27 @@ export default function Dashboard({ onNavigateToAnalyze, onNavigateToReport }) {
           </div>
         </>
       )}
+
+      {/* Synthetic Data Disclaimer Footer */}
+      <div
+        style={{
+          marginTop: '2rem',
+          padding: '1rem 1.5rem',
+          background: 'rgba(15, 23, 42, 0.6)',
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+          borderRadius: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          fontSize: '0.78rem',
+          color: '#64748B'
+        }}
+      >
+        <Info size={16} color="#38BDF8" style={{ flexShrink: 0 }} />
+        <span>
+          <strong>Synthetic Data Notice:</strong> Platform operates on synthetic benchmark safety records for SIH evaluation. All model inferences, Bow-Tie mappings, risk scoring, and audit traces are generated live by the active backend ML & Risk engines.
+        </span>
+      </div>
     </div>
   );
 }
