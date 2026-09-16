@@ -192,9 +192,22 @@ class AssetRiskProfile(BaseModel):
 class DetectedVisualHazard(BaseModel):
     hazard_label: str
     confidence: float
-    severity_level: str
+    severity_level: str  # CRITICAL, HIGH, MEDIUM, LOW, COMPLIANT, UNCERTAIN
+    status: Optional[str] = "DETECTED"  # DETECTED, NOT DETECTED, UNCERTAIN
+    category: Optional[str] = "Hazard"  # PPE, Physical Hazard, Structural Degradation, Environmental
+    is_compliant: Optional[bool] = False
     bounding_box: Optional[Dict[str, float]] = None
     description: str
+
+
+class VisualAuditItem(BaseModel):
+    item_name: str
+    category: str  # "PPE Compliance" or "Physical Hazard"
+    status: str  # "DETECTED", "NOT DETECTED", "UNCERTAIN"
+    confidence: float
+    is_compliant: bool = False
+    details: str
+    bounding_box: Optional[Dict[str, float]] = None
 
 
 class VisionInspectionRequest(BaseModel):
@@ -207,7 +220,9 @@ class VisionInspectionRequest(BaseModel):
 
 class VisionInspectionResponse(BaseModel):
     inspection_id: str
+    vision_model_engine: Optional[str] = "Real Computer Vision Multi-Target Feature Analyzer"
     detected_hazards: List[DetectedVisualHazard]
+    safety_checklist: Optional[List[VisualAuditItem]] = []
     sif_risk_rating: str  # CRITICAL, HIGH, MEDIUM, LOW
     sif_probability: float
     overall_confidence: float
@@ -215,6 +230,7 @@ class VisionInspectionResponse(BaseModel):
     risk_score: Optional[int] = 50
     barrier_integrity_status: str
     recommended_safety_action: List[str]
+    human_verification_required: Optional[bool] = False
     inspected_at: datetime
 
 
